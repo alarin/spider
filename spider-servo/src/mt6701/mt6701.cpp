@@ -24,20 +24,7 @@ void SPISensor::_spiSetup() {
     SPI.setFrequency(1000000);
 }
 
-uint8_t SPISensor::readByte() {
-    digitalWrite(_csPin, LOW);
-    uint8_t val = SPI.transfer(0x00);
-    digitalWrite(_csPin, HIGH);
-    return val;
-}
-
-uint16_t SPISensor::readWord() {
-    digitalWrite(_csPin, LOW);
-    uint16_t val = SPI.transfer16(0x0000);
-    digitalWrite(_csPin, HIGH);
-    return val;
-}
-uint32_t SPISensor::read24() {
+uint32_t SPISensor::readData() {
   digitalWrite(_csPin, LOW);
   uint32_t val = SPI.transfer(0x00);
   val <<= 8;
@@ -49,20 +36,10 @@ uint32_t SPISensor::read24() {
   return val;
 }
 
-void SPISensor::readSSI(uint8_t* data){
-	uint8_t tmp[3];
-    digitalWrite(_csPin, LOW);
-	tmp[0] = SPI.transfer(0xFF);
-	tmp[1] = SPI.transfer(0xFF);
-	tmp[2] = SPI.transfer(0xFF);
-	memcpy(data, &tmp, 3);
-    digitalWrite(_csPin, HIGH);
-}
-
-uint8_t SPISensor::computeCRC(uint16_t D, uint8_t Mg) {
-  // Combine D (14 bits) and Mg (4 bits) into an 18-bit value
-  uint32_t data = ((uint32_t)D << 4) | (Mg & 0x0F);
+bool SPISensor::isCRCValid(uint32_t raw_data) {
   uint8_t crc = 0; // Initialize CRC to 0
+  uint16_t original_crc = raw_data&CRC_MASK;
+  uint32_t data = raw_data >> 6;
 
   // Process each bit from MSB (bit 17) to LSB (bit 0)
   for (int i = 17; i >= 0; i--) {
@@ -81,38 +58,31 @@ uint8_t SPISensor::computeCRC(uint16_t D, uint8_t Mg) {
       }
   }
   
-  return crc; // Returns 6-bit CRC
+  return crc == original_crc;
 }
 
-void SPISensor::mt6701_read_raw(uint16_t *angle_raw, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
-	uint8_t res;
-	uint8_t data[3];
-	uint8_t status;
-	uint16_t angle_u16;
-  uint8_t crc;
+bool SPISensor::read(float *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
+  uint32_t data;
+  uint8_t status;
+  float _angle;
 
-  readSSI(data);
+  data = readData();
 
-  angle_u16  = (uint16_t)(data[1] >> 2);
-  angle_u16 |= ((uint16_t)data[0] << 6);
-  
-  status  = (data[2] >> 6);
-  status |= (data[1] & 0x03) << 2;
+  // uint32_t printVal = 0b1000000000000000000000000;
+  // printVal += data;
+  // Serial.print(">Raw data: ");
+  // Serial.print(printVal, BIN);
 
-  crc = data[2] & 0b00111111;
-
-  // I dont check CRC6, becouse i soo stupid to implement this rare shit
-
-  if (computeCRC(angle_u16, status) != crc) {
-    uint8_t printval = 0b00000000;
-    Serial.print("WRONG CRC ");
-    printval += computeCRC(angle_u16, status);
-    Serial.print(printval, BIN);
-    Serial.print(" received: ");
-    printval = 0b00000000;
-    printval += crc;
-    Serial.println(printval, BIN);
+  if (!isCRCValid(data)) {
+    return false;
   }
+
+  _angle = ( ((data>>10)&0x3FFF) / (float)16384.0f ) * TWO_PI;
+  if(angle != NULL){
+    *angle = _angle; 
+  }
+
+  status = (data >> 6) & 0b1111;
 
   if(field_status != NULL){
     *field_status = (mt6701_status_t) (status & 0x03);
@@ -134,7 +104,5 @@ void SPISensor::mt6701_read_raw(uint16_t *angle_raw, mt6701_status_t *field_stat
     }
   }
 
-  if(angle_raw != NULL){
-    *angle_raw = angle_u16; 
-  }
+  return true;
 }
