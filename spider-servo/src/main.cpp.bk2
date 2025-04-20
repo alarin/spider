@@ -1,0 +1,86 @@
+#include <Arduino.h>
+#include "esp_cpu.h"
+
+const int PWM_PIN = 4;  // PWM input pin
+
+volatile enum { STATE_IDLE, STATE_START_DETECTED, STATE_DATA_HIGH } currentState = STATE_IDLE;
+volatile uint32_t riseTime = 0;
+volatile uint32_t fallTime = 0;
+volatile float angle = 0.0;
+volatile uint32_t stateEnteredTime = 0;
+
+void IRAM_ATTR pwmISR() {
+  if (digitalRead(PWM_PIN)) {
+    // Rising edge detected
+    uint32_t now = esp_cpu_get_ccount();
+    riseTime = now;
+    
+    if (currentState == STATE_IDLE) {
+      currentState = STATE_START_DETECTED;
+      stateEnteredTime = millis();
+    }
+    else if (currentState == STATE_DATA_HIGH) {
+      // Unexpected rising edge, reset state
+      currentState = STATE_IDLE;
+    }
+  } else {
+    // Falling edge detected
+    uint32_t now = esp_cpu_get_ccount();
+    fallTime = now;
+
+    if (currentState == STATE_START_DETECTED) {
+      // Calculate start pattern duration
+      uint32_t highDuration = fallTime - riseTime;
+      uint32_t highNs = highDuration * 6.25;  // Convert cycles to ns
+
+      // Check if start pattern (16 clocks = 3904ns ± 500ns)
+      if (highNs >= 3404 && highNs <= 4404) {
+        currentState = STATE_DATA_HIGH;
+        stateEnteredTime = millis();
+      } else {
+        currentState = STATE_IDLE;
+      }
+    }
+    else if (currentState == STATE_DATA_HIGH) {
+      // Calculate total high duration (start + data phases)
+      uint32_t highDuration = fallTime - riseTime;
+      uint32_t highNs = highDuration * 6.25;  // Convert cycles to ns
+      uint32_t total_clocks = highNs / 244;    // Total clock periods measured
+  
+      // Subtract start pattern duration (16 clocks) to get data clocks
+      if (total_clocks >= 16) {
+          uint32_t data_clocks = total_clocks - 16;
+          // Constrain to valid 12-bit range (0-4095)
+          data_clocks = data_clocks > 4095 ? 4095 : data_clocks;
+          angle = data_clocks * 0.088f;
+      } else {
+          // Invalid measurement, reset angle
+          angle = 0.0f;
+      }
+      currentState = STATE_IDLE;
+  }  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PWM_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PWM_PIN), pwmISR, CHANGE);
+}
+
+void loop() {
+  float prev_angle = 0.0;
+  // Handle timeout for DATA_HIGH state (2ms timeout)
+  if (currentState == STATE_DATA_HIGH && (millis() - stateEnteredTime) > 2) {
+    angle = 0.0;  // Assume 0° if no edge detected
+    currentState = STATE_IDLE;
+  }
+
+  // Display angle
+//  if (angle != prev_angle) {
+  Serial.print("Angle: ");
+  Serial.print(angle);
+  Serial.println("°");
+  prev_angle = angle;
+//  }
+  delay(100);
+}
