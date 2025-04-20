@@ -106,3 +106,12 @@ bool SPISensor::read(float *angle, mt6701_status_t *field_status, bool *button_p
 
   return true;
 }
+
+bool SPISensor::getFilteredAngle(float *angle) {
+  float _angle = 0;
+  if (!read(&_angle, NULL, NULL, NULL)) {
+    return false;
+  }
+  *angle = angleKF.updateEstimate(_angle);
+  return true;
+}
