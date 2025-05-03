@@ -6,12 +6,26 @@
 
 class MotorDriver {
     public:
-        MotorDriver() : encoder(), positionPID(&_current_angle, &_pid_output, &_target_angle, Kp, Ki, Kd, QuickPID::Action::direct) {}
+        enum State {
+            NORMAL,
+            ENCODER_ERROR,
+            MAX_CURRENT_PROTECTION,
+            MIN_MAX_ANGLE_PROTECTION
+        };
+
+        MotorDriver() : 
+            encoder(), 
+            positionPID(&_current_angle, &_pid_output, &_target_angle, Kp, Ki, Kd, QuickPID::Action::direct) {
+            _state = State::NORMAL;
+        }
         
         void setup(double min_angle = 10, double max_angle = 200);
-        void compute();
+        static void computeTask(void *pvParameters);
 
         void setTargetAngle(double angle);
+        double getCurrentAngle();
+
+        void logInfo();
 
     private:
         static constexpr char* TAG = "spider-servo-motor-driver";
@@ -33,6 +47,7 @@ class MotorDriver {
         static constexpr gpio_num_t PIN_MT6701_SCLK = GPIO_NUM_4;
         static constexpr gpio_num_t PIN_MT6701_CS = GPIO_NUM_7;
 
+        State _state;
         double _min_angle;
         double _max_angle;
         
@@ -44,6 +59,7 @@ class MotorDriver {
         MT6701 encoder;
         QuickPID positionPID;
         
+        void compute();
         void pwmInit();
         void setMotorPWM(float duty_cycle);        
         float readCurrent();

@@ -11,12 +11,20 @@
 
 
 void MotorDriver::setTargetAngle(double angle) {
+    if (angle < _min_angle) {
+        angle = _min_angle;
+    }
+    if (angle > _max_angle) {
+        angle = _max_angle;
+    }
     _target_angle = angle;
 }
 
 void MotorDriver::setup(double min_angle, double max_angle) {
+    ESP_LOGI(TAG, "Setting up..");
     encoder.begin(PIN_MT6701_SCLK, PIN_MT6701_MISO, PIN_MT6701_CS);
 
+    ESP_LOGI(TAG, "Setting up, pins..");
     gpio_reset_pin(PIN_MOTOR_DIR);
     gpio_set_direction(PIN_MOTOR_DIR, GPIO_MODE_OUTPUT);
     gpio_reset_pin(PIN_MOTOR_PWM);
@@ -25,15 +33,36 @@ void MotorDriver::setup(double min_angle, double max_angle) {
     gpio_set_direction(PIN_MOTOR_BRAKE, GPIO_MODE_OUTPUT);
 
     //curent sensor
+    ESP_LOGI(TAG, "Setting up current sensor");
     adc1_config_width(ADC_WIDTH);
     adc1_config_channel_atten(PIN_CURRENT_SENSOR, ADC_ATTEN);
     esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, 0, &adc_chars);
 
+    ESP_LOGI(TAG, "Setting up motor pwm");
     pwmInit();
+    setMotorPWM(0);
 
     positionPID.SetSampleTimeUs(SAMPLE_TIME_US);
     positionPID.SetOutputLimits(0, OUTPUT_MID_POINT*2);
     positionPID.SetMode(QuickPID::Control::automatic);
+
+    ESP_LOGI(TAG, "Settings up tasks");
+    xTaskCreate(
+        MotorDriver::computeTask,    // Function that should be called
+        "Compute PID",   // Name of the task (for debugging)
+        10000,            // Stack size (bytes)
+        this,      // Parameter to pass
+        1,               // Task priority
+        NULL             // Task handle
+    );        
+}
+
+double MotorDriver::getCurrentAngle() {
+    return _current_angle;
+}
+
+void MotorDriver::logInfo() {
+    ESP_LOGI(TAG, "state: %d, angle: %.2f, target: %.2f, output: %.2f", _state, _current_angle, _target_angle, _pid_output);
 }
 
 float MotorDriver::readCurrent() {
@@ -58,14 +87,18 @@ float MotorDriver::readCurrent() {
 }
 
 void MotorDriver::compute() {
-    
     //read angle
     bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
-    if (!result) {
-        ESP_LOGE(TAG, "CRC ERROR");
+    if (!result) {        
+        if (_state != State::ENCODER_ERROR) {
+            ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
+            _state = State::ENCODER_ERROR;
+        }
         setMotorPWM(0);
         return;
     }
+    _state = State::NORMAL;
+
     //test current
     float current = readCurrent();
     if (current >= 4) {
@@ -73,11 +106,16 @@ void MotorDriver::compute() {
         setMotorPWM(0);
         return;
     }
-    //test angle min max
-
-
     positionPID.Compute();
-    setSpeedAndDirection();
+    setSpeedAndDirection();    
+} 
+
+void MotorDriver::computeTask(void *pvParameters) {
+    for(;;){
+        MotorDriver *l_pThis = (MotorDriver *) pvParameters;   
+        l_pThis->compute();
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
 }
 
 void MotorDriver::pwmInit() {
@@ -122,5 +160,11 @@ void MotorDriver::setSpeedAndDirection() {
         speed = 0;
     }
     gpio_set_level(PIN_MOTOR_DIR, direction);
+
+    if ((_current_angle <= _min_angle && !direction)
+        || (_current_angle >= _max_angle && direction)) {
+        ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
+        speed = 0;        
+    }
     setMotorPWM(speed);
 }

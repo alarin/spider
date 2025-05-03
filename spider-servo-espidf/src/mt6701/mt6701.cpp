@@ -1,12 +1,16 @@
 #include "mt6701.h"
 #include "math.h"
+#include "esp_log.h"
 
 #define CRC_MASK             0b000000000000000000111111
 #define MFC_MASK             0b000000000000001111000000
 #define MFC_STRENGTH_MASK    0b000000000000000011000000
 #define ANGLE_MASK           0b111111111111110000000000
 
+#define TAG "MT6701-driver"
+
 void MT6701::begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) {
+    ESP_LOGI(TAG, "Setting up...");
     _csPin = ss;
     _sckPin = sck;
     _misoPin = miso;
@@ -18,6 +22,7 @@ void MT6701::begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) {
 }
 
 void MT6701::_spiSetup() {
+    ESP_LOGI(TAG, "SPI setting up...");
     esp_err_t ret;
     spi_bus_config_t buscfg = {
         .miso_io_num = _misoPin,
@@ -26,18 +31,14 @@ void MT6701::_spiSetup() {
     spi_device_interface_config_t devcfg = {
         .mode = 1,
         .clock_speed_hz = 1000000,        
-        .spics_io_num = _csPin
+        .spics_io_num = _csPin,
+        .queue_size = 4
     };
     //Initialize the SPI bus
     ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
     ESP_ERROR_CHECK(ret);   
     ret = spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
     ESP_ERROR_CHECK(ret);     
-    // SPI.setBitOrder(MSBFIRST);
-    // // SPI.setDataMode(SPI_MODE2);
-    // // SPI.setFrequency(1000000);
-    // SPI.setDataMode(SPI_MODE1);
-    // SPI.setFrequency(1000000);
 }
 
 uint32_t MT6701::readData() {
