@@ -1,6 +1,6 @@
-#include <Arduino.h>
-#include <SPI.h>
-#include "SimpleKalmanFilter.h"
+#include <stdio.h>
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
 
 class MT6701 {
     public:
@@ -14,17 +14,16 @@ class MT6701 {
       // SPISensor(): angleKF(1, 1, 0.01) {
       // }
 
-      void begin(int8_t sck, int8_t miso, int8_t ss);
+      void begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss);
   
       bool read(float *doule, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss );
-      bool getFilteredAngle(float *angle);
     protected:
       uint32_t readData();
     private:
-      SimpleKalmanFilter angleKF{1, 1, 0.01};
-      uint8_t _csPin;
-      uint8_t _sckPin;
-      uint8_t _misoPin;
+      gpio_num_t _csPin;
+      gpio_num_t _sckPin;
+      gpio_num_t _misoPin;
+      spi_device_handle_t spi;
       void _spiSetup();      
     
       bool isCRCValid(uint32_t raw_data);

@@ -1,39 +1,62 @@
 #include "mt6701.h"
+#include "math.h"
 
 #define CRC_MASK             0b000000000000000000111111
 #define MFC_MASK             0b000000000000001111000000
 #define MFC_STRENGTH_MASK    0b000000000000000011000000
 #define ANGLE_MASK           0b111111111111110000000000
 
-void MT6701::begin(int8_t sck, int8_t miso, int8_t ss) {
+void MT6701::begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) {
     _csPin = ss;
     _sckPin = sck;
     _misoPin = miso;
-
-    pinMode(_csPin, OUTPUT);
-    digitalWrite(_csPin, HIGH);
-    SPI.begin(_sckPin, _misoPin, _csPin);
+    
+    gpio_set_direction(_csPin, GPIO_MODE_OUTPUT);
+    gpio_set_level(_csPin, 1);
+    //SPI.begin(_sckPin, _misoPin, _csPin);
     _spiSetup();
 }
 
 void MT6701::_spiSetup() {
-    SPI.setBitOrder(MSBFIRST);
-    // SPI.setDataMode(SPI_MODE2);
+    esp_err_t ret;
+    spi_bus_config_t buscfg = {
+        .miso_io_num = _misoPin,
+        .sclk_io_num = _sckPin
+    };
+    spi_device_interface_config_t devcfg = {
+        .mode = 1,
+        .clock_speed_hz = 1000000,        
+        .spics_io_num = _csPin
+    };
+    //Initialize the SPI bus
+    ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    ESP_ERROR_CHECK(ret);   
+    ret = spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
+    ESP_ERROR_CHECK(ret);     
+    // SPI.setBitOrder(MSBFIRST);
+    // // SPI.setDataMode(SPI_MODE2);
+    // // SPI.setFrequency(1000000);
+    // SPI.setDataMode(SPI_MODE1);
     // SPI.setFrequency(1000000);
-    SPI.setDataMode(SPI_MODE1);
-    SPI.setFrequency(1000000);
 }
 
 uint32_t MT6701::readData() {
-  digitalWrite(_csPin, LOW);
-  uint32_t val = SPI.transfer(0x00);
-  val <<= 8;
-  val |=  SPI.transfer(0x00);  
-  val <<= 8;
-  val |=  SPI.transfer(0x00);
-  SPI.transfer(0xFF);  
-  digitalWrite(_csPin, HIGH);
-  return val;
+  uint8_t tx[4] = {0x00, 0x00, 0x00, 0xFF};
+  uint8_t rx[4] = {0};
+  
+  spi_transaction_t trans = {
+      .length = 24,
+      .tx_buffer = tx,
+      .rx_buffer = rx
+  };
+  
+  esp_err_t ret = spi_device_transmit(spi, &trans);
+  if(ret != ESP_OK) {
+      // Handle error
+      return 0;
+  }
+  
+  return (rx[0] << 16) | (rx[1] << 8) | rx[2];
 }
 
 bool MT6701::isCRCValid(uint32_t raw_data) {
@@ -77,7 +100,7 @@ bool MT6701::read(float *angle, mt6701_status_t *field_status, bool *button_push
     return false;
   }
 
-  _angle = ( ((data>>10)&0x3FFF) / (double)16384.0f ) * TWO_PI;
+  _angle = ( ((data>>10)&0x3FFF) / (double)16384.0f ) * M_TWOPI;
   if(angle != NULL){
     *angle = _angle; 
   }
@@ -104,14 +127,5 @@ bool MT6701::read(float *angle, mt6701_status_t *field_status, bool *button_push
     }
   }
 
-  return true;
-}
-
-bool MT6701::getFilteredAngle(float *angle) {
-  float _angle = 0;
-  if (!read(&_angle, NULL, NULL, NULL)) {
-    return false;
-  }
-  *angle = angleKF.updateEstimate(_angle);
   return true;
 }
