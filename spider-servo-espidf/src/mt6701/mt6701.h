@@ -16,7 +16,7 @@ class MT6701 {
 
       void begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss);
   
-      bool read(float *doule, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss );
+      bool read(double *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss );
     protected:
       uint32_t readData();
     private:

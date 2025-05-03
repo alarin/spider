@@ -84,7 +84,7 @@ bool MT6701::isCRCValid(uint32_t raw_data) {
   return crc == original_crc;
 }
 
-bool MT6701::read(float *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
+bool MT6701::read(double *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
   uint32_t data;
   uint8_t status;
   double _angle;
@@ -100,7 +100,7 @@ bool MT6701::read(float *angle, mt6701_status_t *field_status, bool *button_push
     return false;
   }
 
-  _angle = ( ((data>>10)&0x3FFF) / (double)16384.0f ) * M_TWOPI;
+  _angle = ( ((data>>10)&0x3FFF) / (double)16384.0f ) * 360;
   if(angle != NULL){
     *angle = _angle; 
   }
