@@ -1,8 +1,8 @@
 #include "mt6701/mt6701.h"
+#include "currentsensor/ACS712.h"
 #include "QuickPid.h"
 #include "driver/gpio.h"
 #include "driver/adc.h"
-#include "esp_adc_cal.h"
 
 class MotorDriver {
     public:
@@ -28,6 +28,8 @@ class MotorDriver {
         void setP(double p);
         void setI(double i);
         void setD(double d);
+
+        float calibrateCurrent(float realCurrent);
 
         void logInfo();
 
@@ -58,9 +60,9 @@ class MotorDriver {
         double _current;
         double _current_angle;
         double _target_angle;
-        double _pid_output;        
-        esp_adc_cal_characteristics_t adc_chars;
+        double _pid_output;
 
+        ACS712 currentSensor;
         MT6701 encoder;
         QuickPID positionPID;
         

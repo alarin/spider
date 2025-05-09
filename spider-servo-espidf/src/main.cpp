@@ -49,7 +49,9 @@ void app_main(void)
                     case 'd':
                         motorDriver.setD(commandValue);
                         break;
-
+                    case 'w':                        
+                        ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));
+                        break;
                 }
                 
                 inputPos = 0;
