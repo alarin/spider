@@ -23,7 +23,9 @@ class MT6701 {
       gpio_num_t _csPin;
       gpio_num_t _sckPin;
       gpio_num_t _misoPin;
-      spi_device_handle_t spi;
+      spi_device_handle_t _spi;
+      spi_transaction_t _spiTransaction;
+      uint32_t lastUpdate;
       void _spiSetup();      
     
       bool isCRCValid(uint32_t raw_data);

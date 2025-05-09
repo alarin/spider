@@ -23,6 +23,7 @@ void app_main(void)
 {
     uint8_t ch;    
     char inputBuffer[INPUT_BUFFER_SIZE + 1]; 
+    double commandValue;
     uint8_t inputPos = 0;
     MotorDriver motorDriver;
 
@@ -33,8 +34,24 @@ void app_main(void)
 	    if (ch != 0xFF) {
 		    if (ch == '\n' || inputPos >= INPUT_BUFFER_SIZE) {
                 inputBuffer[inputPos] = '\0';
-                ESP_LOGI(TAG, "command received: %s \n", inputBuffer);
-                motorDriver.setTargetAngle(atof(inputBuffer));
+                commandValue = atof(inputBuffer + 2);
+                ESP_LOGI(TAG, "command received: %c %.2f \n", inputBuffer[0], commandValue);
+                switch(inputBuffer[0]) {
+                    case 'a': 
+                        motorDriver.setTargetAngle(commandValue);
+                        break;
+                    case 'p':
+                        motorDriver.setP(commandValue);
+                        break;
+                    case 'i':
+                        motorDriver.setI(commandValue);
+                        break;
+                    case 'd':
+                        motorDriver.setD(commandValue);
+                        break;
+
+                }
+                
                 inputPos = 0;
             } else {
                 inputBuffer[inputPos++] = ch;

@@ -6,23 +6,42 @@
 
 #define ADC_ATTEN        ADC_ATTEN_DB_11  // 0-3.1V range
 #define ADC_WIDTH        ADC_WIDTH_BIT_12 // 12-bit resolution
-#define ZERO_CURRENT_ADC 2048            // Calibrate this value!
+#define ZERO_CURRENT_ADC 3644            // Calibrate this value!3795
 #define VOLTAGE_DIVIDER_RATIO 1.5        // 2k/(1k+2k) divider ratio
 
 
 void MotorDriver::setTargetAngle(double angle) {
-    if (angle < _min_angle) {
-        angle = _min_angle;
-    }
-    if (angle > _max_angle) {
-        angle = _max_angle;
-    }
+    // if (angle < _min_angle) {
+    //     angle = _min_angle;
+    // }
+    // if (angle > _max_angle) {
+    //     angle = _max_angle;
+    // }
     _target_angle = angle;
 }
+
+void MotorDriver::setP(double p) {
+    positionPID.SetTunings(p, positionPID.GetKi(), positionPID.GetKd());
+}
+
+void MotorDriver::setI(double i) {
+    positionPID.SetTunings(positionPID.GetKp(), i, positionPID.GetKd());
+}
+
+void MotorDriver::setD(double d) {
+    positionPID.SetTunings(positionPID.GetKp(), positionPID.GetKi(), d);
+}
+
 
 void MotorDriver::setup(double min_angle, double max_angle) {
     ESP_LOGI(TAG, "Setting up..");
     encoder.begin(PIN_MT6701_SCLK, PIN_MT6701_MISO, PIN_MT6701_CS);
+    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
+    if (!result) {        
+        ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
+        _state = State::ENCODER_ERROR;
+    }
+    _target_angle = _current_angle;
 
     ESP_LOGI(TAG, "Setting up, pins..");
     gpio_reset_pin(PIN_MOTOR_DIR);
@@ -62,7 +81,8 @@ double MotorDriver::getCurrentAngle() {
 }
 
 void MotorDriver::logInfo() {
-    ESP_LOGI(TAG, "state: %d, angle: %.2f, target: %.2f, output: %.2f", _state, _current_angle, _target_angle, _pid_output);
+    ESP_LOGI(TAG, "state: %d, angle: %.2f, target: %.2f, output: %.2f, current: %.2f", 
+        _state, _current_angle, _target_angle, _pid_output, _current);
 }
 
 float MotorDriver::readCurrent() {
@@ -74,13 +94,16 @@ float MotorDriver::readCurrent() {
         raw += adc1_get_raw(PIN_CURRENT_SENSOR);
     }
     raw /= samples;
+    // ESP_LOGI(TAG, "%ld", raw);
 
     // Convert to voltage (with calibration and divider compensation)
     float voltage = esp_adc_cal_raw_to_voltage(raw, &adc_chars) / 1000.0;
     voltage *= VOLTAGE_DIVIDER_RATIO;
 
     // Calculate current (ACS712 20A: 100mV/A)
+    //ACS712 5A 185mV/A 
     float zero_voltage = esp_adc_cal_raw_to_voltage(ZERO_CURRENT_ADC, &adc_chars) / 1000.0 * VOLTAGE_DIVIDER_RATIO;
+    //float current = (voltage - zero_voltage) / 0.185;
     float current = (voltage - zero_voltage) / 0.1;
 
     return current;
@@ -100,12 +123,12 @@ void MotorDriver::compute() {
     _state = State::NORMAL;
 
     //test current
-    float current = readCurrent();
-    if (current >= 4) {
-        ESP_LOGE(TAG, "Too much current, stopping %f", current);
-        setMotorPWM(0);
-        return;
-    }
+    _current = readCurrent();
+    // if (current >= 4) {
+    //     ESP_LOGE(TAG, "Too much current, stopping %f", current);
+    //     setMotorPWM(0);
+    //     return;
+    // }
     positionPID.Compute();
     setSpeedAndDirection();    
 } 
@@ -161,10 +184,10 @@ void MotorDriver::setSpeedAndDirection() {
     }
     gpio_set_level(PIN_MOTOR_DIR, direction);
 
-    if ((_current_angle <= _min_angle && !direction)
-        || (_current_angle >= _max_angle && direction)) {
-        ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
-        speed = 0;        
-    }
+    // if ((_current_angle <= _min_angle && !direction)
+    //     || (_current_angle >= _max_angle && direction)) {
+    //     ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
+    //     speed = 0;        
+    // }
     setMotorPWM(speed);
 }

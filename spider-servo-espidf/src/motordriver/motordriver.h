@@ -19,11 +19,15 @@ class MotorDriver {
             _state = State::NORMAL;
         }
         
-        void setup(double min_angle = 10, double max_angle = 200);
+        void setup(double min_angle = 0, double max_angle = 300);
         static void computeTask(void *pvParameters);
 
         void setTargetAngle(double angle);
         double getCurrentAngle();
+
+        void setP(double p);
+        void setI(double i);
+        void setD(double d);
 
         void logInfo();
 
@@ -44,13 +48,14 @@ class MotorDriver {
         static constexpr gpio_num_t PIN_MOTOR_BRAKE = GPIO_NUM_3;
         
         static constexpr gpio_num_t PIN_MT6701_MISO = GPIO_NUM_5;
-        static constexpr gpio_num_t PIN_MT6701_SCLK = GPIO_NUM_4;
+        static constexpr gpio_num_t PIN_MT6701_SCLK = GPIO_NUM_6;
         static constexpr gpio_num_t PIN_MT6701_CS = GPIO_NUM_7;
 
         State _state;
         double _min_angle;
         double _max_angle;
         
+        double _current;
         double _current_angle;
         double _target_angle;
         double _pid_output;        
