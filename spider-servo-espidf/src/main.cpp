@@ -10,7 +10,7 @@
 #include "motordriver/motordriver.h"
 
 
-#define CONFIG_PRINT_DELAY 100
+#define CONFIG_PRINT_DELAY 300
 #define INPUT_BUFFER_SIZE 100
 
 static const char *TAG = "spider-servo";
@@ -48,6 +48,10 @@ void app_main(void)
                         break;
                     case 'd':
                         motorDriver.setD(commandValue);
+                        break;
+                    case 'z':                        
+                        ESP_LOGE(TAG, "Starting PID tuning");
+                        motorDriver.startTuning();
                         break;
                     case 'w':                        
                         ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));

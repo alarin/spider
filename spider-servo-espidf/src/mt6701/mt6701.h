@@ -1,3 +1,6 @@
+#ifndef _MT6701_H_
+#define _MT6701_H_
+
 #include <stdio.h>
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
@@ -30,3 +33,5 @@ class MT6701 {
     
       bool isCRCValid(uint32_t raw_data);
   };
+
+#endif

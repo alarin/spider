@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "spider-servo"
+		},
+		{
+			"name": "spider-servo-espidf",
+			"path": "spider-servo-espidf"
+		},
+		{
+			"path": "python_serial_plotter"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"task.h": "c",
+			"sdkconfig.h": "c",
+			"usb_serial_jtag.h": "c",
+			"esp_log.h": "c",
+			"string": "cpp",
+			"functional": "cpp",
+			"compare": "cpp",
+			"cstdint": "cpp"
+		}
+	}
+}

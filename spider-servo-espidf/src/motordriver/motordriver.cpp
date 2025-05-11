@@ -2,6 +2,7 @@
 
 #include "driver/ledc.h"
 #include "esp_log.h"
+#include "utils.h"
 
 
 void MotorDriver::setTargetAngle(double angle) {
@@ -28,6 +29,17 @@ void MotorDriver::setD(double d) {
 
 float MotorDriver::calibrateCurrent(float realCurrent) {
     return currentSensor.calibrate(realCurrent);
+}
+
+void MotorDriver::startTuning() {
+    _tuning = 1;
+    _tuning_cycle = 0;
+    _tuning_max_angle = 0;
+    _tuning_min_angle = 360;
+    _min_angle_t = 0;
+    _max_angle_t = 0;    
+    positionPID.SetTunings(positionPID.GetKp(), 0, 0);
+    setTargetAngle(100);
 }
 
 void MotorDriver::setup(double min_angle, double max_angle) {
@@ -66,7 +78,7 @@ void MotorDriver::setup(double min_angle, double max_angle) {
         "Compute PID",   // Name of the task (for debugging)
         10000,            // Stack size (bytes)
         this,      // Parameter to pass
-        1,               // Task priority
+        10,               // Task priority
         NULL             // Task handle
     );        
 }
@@ -76,8 +88,43 @@ double MotorDriver::getCurrentAngle() {
 }
 
 void MotorDriver::logInfo() {
-    ESP_LOGI(TAG, "state: %d, angle: %.2f, target: %.2f, output: %.2f, current: %.2f", 
-        _state, _current_angle, _target_angle, _pid_output, _current);
+    ESP_LOGI(TAG, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, current: %.2f, p %.2f, i %.2f, d %.2f", 
+        _state, _current_angle, _target_angle, _pid_output, _current, positionPID.GetKp(), positionPID.GetKi(), positionPID.GetKd());
+}
+
+void MotorDriver::_tune_cycle() {
+    if (_tuning > 0) {
+        if (_tuning_cycle >= TUNING_CYCLES) {
+            if (_tuning == 1) {
+                ESP_LOGE(TAG, "Tuning: found min/max angles (%.2f, %.2f) calcuating Tu", _tuning_min_angle, _tuning_max_angle);
+                _tuning = 2;
+            }
+            if (_min_angle_t != 0 && _max_angle_t != 0) {            
+                double ku = positionPID.GetKp();
+                double tu = abs((int64_t) _min_angle_t - (int64_t) _max_angle_t)/1000.0;
+                double p = 0.6 * ku;
+                double i = 1.2 * ku/tu;
+                double d = 0.075 * ku * tu;
+                ESP_LOGE(TAG, "Tuning finished Ku %.2f, Tu %.4f, p %.4f, i %.4f, d %.4f", ku, tu, p, i, d);
+                _tuning = 0;
+            } else {
+                if (abs(_current_angle - _tuning_min_angle) <= 0.001) {
+                    _min_angle_t = millis();
+                }
+                if (abs(_current_angle - _tuning_max_angle) <= 0.001) {
+                    _max_angle_t = millis();
+                }
+            }
+        } else if (_tuning_cycle >= TUNING_CYCLES/2) {
+            if (_current_angle < _tuning_min_angle) {
+                _tuning_min_angle = _current_angle;
+            } 
+            if (_current_angle > _tuning_max_angle) {
+                _tuning_max_angle = _current_angle;
+            }
+        }
+        _tuning_cycle++;
+    }
 }
 
 void MotorDriver::compute() {
@@ -92,6 +139,10 @@ void MotorDriver::compute() {
         return;
     }
     _state = State::NORMAL;
+
+    if (_tuning > 0) {
+        _tune_cycle();
+    }
 
     //test current
     _current = currentSensor.readCurrent();
@@ -108,7 +159,7 @@ void MotorDriver::computeTask(void *pvParameters) {
     for(;;){
         MotorDriver *l_pThis = (MotorDriver *) pvParameters;   
         l_pThis->compute();
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+        vTaskDelay(10/ portTICK_PERIOD_MS);
     }
 }
 
@@ -153,6 +204,7 @@ void MotorDriver::setSpeedAndDirection() {
     if ((speed) < 20) {
         speed = 0;
     }
+    // encoder.setSpeedAndDirection(direction, speed);
     gpio_set_level(PIN_MOTOR_DIR, direction);
 
     // if ((_current_angle <= _min_angle && !direction)

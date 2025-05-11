@@ -25,12 +25,12 @@ float ACS712::readCurrent() {
 }
 
 float ACS712::calibrate(float realCurrent) {
-    if (realCurrent == 0) {
+    if (abs(realCurrent) <= 0.0001) {
         //zero point calibration
         return _readRawAverage();
     } else {
         float measuredVoltage = readCurrent() * (MVA/1000.0);
-        return realCurrent / measuredVoltage;
+        return measuredVoltage / realCurrent;
     }
 }
 
