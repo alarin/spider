@@ -106,12 +106,13 @@ void MotorDriver::_tune_cycle() {
                 double i = 1.2 * ku/tu;
                 double d = 0.075 * ku * tu;
                 ESP_LOGE(TAG, "Tuning finished Ku %.2f, Tu %.4f, p %.4f, i %.4f, d %.4f", ku, tu, p, i, d);
+                positionPID.SetTunings(p, i, d);
                 _tuning = 0;
             } else {
-                if (abs(_current_angle - _tuning_min_angle) <= 0.001) {
+                if (abs(_current_angle - _tuning_min_angle) <= 0.1) {
                     _min_angle_t = millis();
                 }
-                if (abs(_current_angle - _tuning_max_angle) <= 0.001) {
+                if (abs(_current_angle - _tuning_max_angle) <= 0.1) {
                     _max_angle_t = millis();
                 }
             }
@@ -159,7 +160,7 @@ void MotorDriver::computeTask(void *pvParameters) {
     for(;;){
         MotorDriver *l_pThis = (MotorDriver *) pvParameters;   
         l_pThis->compute();
-        vTaskDelay(10/ portTICK_PERIOD_MS);
+        vTaskDelay(COMPUTE_TASK_DELAY_MS / portTICK_PERIOD_MS);
     }
 }
 
@@ -201,7 +202,7 @@ void MotorDriver::setSpeedAndDirection() {
         direction = false;
         speed = OUTPUT_MID_POINT - _pid_output - 2;
     }
-    if ((speed) < 20) {
+    if ((speed) < 30) {
         speed = 0;
     }
     // encoder.setSpeedAndDirection(direction, speed);

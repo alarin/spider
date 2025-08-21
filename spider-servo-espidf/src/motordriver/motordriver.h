@@ -38,11 +38,12 @@ class MotorDriver {
 
     private:
         static constexpr char* TAG = "spider-servo-motor-driver";
-
-        static constexpr double Kp = 14.3;
-        static constexpr double Ki = 0;
-        static constexpr double Kd = 0;
-        static constexpr uint32_t SAMPLE_TIME_US = 1000;
+        
+        static constexpr double Kp = 7.8;
+        static constexpr double Ki = 28.36;
+        static constexpr double Kd = 0.54;
+        static constexpr uint32_t SAMPLE_TIME_US = 10 * 1000;
+        static constexpr uint32_t COMPUTE_TASK_DELAY_MS = 10;
         static constexpr uint16_t TUNING_CYCLES = 500;
 
         static constexpr uint8_t OUTPUT_MID_POINT = 255;

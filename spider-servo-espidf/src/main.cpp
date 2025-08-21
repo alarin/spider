@@ -8,9 +8,9 @@
 
 #include "QuickPID.h"
 #include "motordriver/motordriver.h"
+#include "can/can.h"
 
-
-#define CONFIG_PRINT_DELAY 300
+#define CONFIG_PRINT_DELAY 100
 #define INPUT_BUFFER_SIZE 100
 
 static const char *TAG = "spider-servo";
@@ -26,8 +26,10 @@ void app_main(void)
     double commandValue;
     uint8_t inputPos = 0;
     MotorDriver motorDriver;
+    CAN can;
 
     motorDriver.setup();    
+    can.setup();
 
     while (1) { 
 	    ch = getchar();
@@ -63,7 +65,15 @@ void app_main(void)
                 inputBuffer[inputPos++] = ch;
             }
 	    }        
-        motorDriver.logInfo();
+        
+        //RECEIVE CAN messages (non-blocking)
+        twai_message_t rx_msg;
+        if (twai_receive(&rx_msg, pdMS_TO_TICKS(100)) == ESP_OK) {
+            ESP_LOGI(TAG, "Received CAN ID: 0x%lx", rx_msg.identifier);
+            ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
+        }
+
+        //motorDriver.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }
 }

@@ -15,11 +15,10 @@ float ACS712::readCurrent() {
     
     // Convert to voltage (with calibration and divider compensation)
     float voltage = esp_adc_cal_raw_to_voltage(raw, &_adc_chars) / 1000.0;
-    voltage *= VOLTAGE_DIVIDER_RATIO;
 
     // Calculate current
-    float zero_voltage = esp_adc_cal_raw_to_voltage(ZERO_CURRENT_ADC, &_adc_chars) / 1000.0 * VOLTAGE_DIVIDER_RATIO;
-    float current = (voltage - zero_voltage) / (MVA/1000.0);
+    float zero_voltage = esp_adc_cal_raw_to_voltage(ZERO_CURRENT_ADC, &_adc_chars) / 1000.0;
+    float current = (voltage - zero_voltage) * VOLTAGE_DIVIDER_RATIO / (MVA/1000.0);
 
     return current;
 }
@@ -29,13 +28,13 @@ float ACS712::calibrate(float realCurrent) {
         //zero point calibration
         return _readRawAverage();
     } else {
-        float measuredVoltage = readCurrent() * (MVA/1000.0);
-        return measuredVoltage / realCurrent;
+        float measuredVoltage = readCurrent() * (MVA/1000.0) / VOLTAGE_DIVIDER_RATIO;
+        return measuredVoltage / realCurrent * 1000;
     }
 }
 
 uint32_t ACS712::_readRawAverage() {
-    const int samples = 128; // Increased for better noise immunity
+    const int samples = 256; // Increased for better noise immunity
     uint32_t raw = 0;
     
     // Sample averaging
