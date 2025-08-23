@@ -12,6 +12,7 @@ void MotorDriver::setTargetAngle(double angle) {
     // if (angle > _max_angle) {
     //     angle = _max_angle;
     // }
+    ESP_LOGI(TAG, "Set target angle to %lf", angle);
     _target_angle = angle;
 }
 

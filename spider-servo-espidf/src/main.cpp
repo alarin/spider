@@ -8,7 +8,9 @@
 
 #include "QuickPID.h"
 #include "motordriver/motordriver.h"
-#include "can/can.h"
+#include "twai/twai.h"
+
+#include "config.h"
 
 #define CONFIG_PRINT_DELAY 100
 #define INPUT_BUFFER_SIZE 100
@@ -26,12 +28,18 @@ void app_main(void)
     double commandValue;
     uint8_t inputPos = 0;
     MotorDriver motorDriver;
-    CAN can;
+
+    MOTOR_TWAI twai;
+    motor_commant_t motor_cmd;
 
     motorDriver.setup();    
-    can.setup();
+    twai.setup(LEG_ID, MOTOR_ID);
 
     while (1) { 
+        if (twai.receive(&motor_cmd)) {
+            motorDriver.setTargetAngle(motor_cmd.param);
+        }
+
 	    ch = getchar();
 	    if (ch != 0xFF) {
 		    if (ch == '\n' || inputPos >= INPUT_BUFFER_SIZE) {
@@ -64,15 +72,8 @@ void app_main(void)
             } else {
                 inputBuffer[inputPos++] = ch;
             }
-	    }        
+	    }                    
         
-        //RECEIVE CAN messages (non-blocking)
-        twai_message_t rx_msg;
-        if (twai_receive(&rx_msg, pdMS_TO_TICKS(100)) == ESP_OK) {
-            ESP_LOGI(TAG, "Received CAN ID: 0x%lx", rx_msg.identifier);
-            ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
-        }
-
         //motorDriver.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }

@@ -74,7 +74,7 @@ class Plotter:
         self.read_cmd()
         self.parser.update()
         for var in self.parser.vars:
-            if var in ['target', 'angle', 'output']:
+            if var in ['target', 'angle']:
                 if self.plots.get(var) is None:
                     self.plots[var], = self.axes.plot([], [])
                 self.plots[var].set_data(range(self.maxLen), self.parser.vars[var])

@@ -9,6 +9,10 @@
 		},
 		{
 			"path": "python_serial_plotter"
+		},
+		{
+			"name": "spider-servo-can-controller",
+			"path": "spider-servo-can-controller"
 		}
 	],
 	"settings": {

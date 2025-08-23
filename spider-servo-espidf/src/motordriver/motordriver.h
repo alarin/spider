@@ -37,7 +37,7 @@ class MotorDriver {
         void startTuning();
 
     private:
-        static constexpr char* TAG = "spider-servo-motor-driver";
+        static constexpr const char* TAG = "spider-servo-motor-driver";
         
         static constexpr double Kp = 7.8;
         static constexpr double Ki = 28.36;
