@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -9,6 +10,7 @@
 #include "QuickPID.h"
 #include "motordriver/motordriver.h"
 #include "twai/twai.h"
+
 
 #include "config.h"
 

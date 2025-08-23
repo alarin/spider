@@ -31,11 +31,11 @@ void MOTOR_TWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num
 
 bool MOTOR_TWAI::receive(motor_commant_t *cmd) {
     twai_message_t rx_msg;
-    if (twai_receive(&rx_msg, pdMS_TO_TICKS(1000)) == ESP_OK) {
-        ESP_LOGI(TAG, "Received CAN ID: 0x%lx", rx_msg.identifier);
-        ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
+    if (twai_receive(&rx_msg, pdMS_TO_TICKS(100)) == ESP_OK) {
         cmd->command = rx_msg.data[0];
         memcpy(&cmd->param, &rx_msg.data[1], sizeof(cmd->param)); 
+        ESP_LOGI(TAG, "Received CAN ID: 0x%lx, payload %f", rx_msg.identifier, cmd->param);
+        ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
         return true;
     }
     return false;
