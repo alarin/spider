@@ -6,12 +6,12 @@
 
 
 void MotorDriver::setTargetAngle(double angle) {
-    // if (angle < _min_angle) {
-    //     angle = _min_angle;
-    // }
-    // if (angle > _max_angle) {
-    //     angle = _max_angle;
-    // }
+    if (angle < _min_angle) {
+        angle = _min_angle;
+    }
+    if (angle > _max_angle) {
+        angle = _max_angle;
+    }
     ESP_LOGI(TAG, "Set target angle to %lf", angle);
     _target_angle = angle;
 }
@@ -30,6 +30,10 @@ void MotorDriver::setD(double d) {
 
 float MotorDriver::calibrateCurrent(float realCurrent) {
     return currentSensor.calibrate(realCurrent);
+}
+
+MotorDriver::State MotorDriver::getState() {
+    return _state;
 }
 
 void MotorDriver::startTuning() {
@@ -146,13 +150,6 @@ void MotorDriver::compute() {
         _tune_cycle();
     }
 
-    //test current
-    _current = currentSensor.readCurrent();
-    // if (current >= 4) {
-    //     ESP_LOGE(TAG, "Too much current, stopping %f", current);
-    //     setMotorPWM(0);
-    //     return;
-    // }
     positionPID.Compute();
     setSpeedAndDirection();    
 } 
@@ -209,10 +206,24 @@ void MotorDriver::setSpeedAndDirection() {
     // encoder.setSpeedAndDirection(direction, speed);
     gpio_set_level(PIN_MOTOR_DIR, direction);
 
-    // if ((_current_angle <= _min_angle && !direction)
-    //     || (_current_angle >= _max_angle && direction)) {
-    //     ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
-    //     speed = 0;        
-    // }
+    if ((_current_angle <= _min_angle && !direction)
+        || (_current_angle >= _max_angle && direction)) {
+        if (_state != MIN_MAX_ANGLE_PROTECTION) {
+            ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
+            _state = MIN_MAX_ANGLE_PROTECTION;
+        }
+        speed = 0;
+    }
+
+        //test current
+    _current = currentSensor.readCurrent();
+    if (_current >= MAX_CURRENT) {
+        if (_state != MAX_CURRENT_PROTECTION) {
+            ESP_LOGE(TAG, "Too much current, stopping %f, limit %f", _current, MAX_CURRENT);
+            _state = MAX_CURRENT_PROTECTION;
+        }
+        speed = 0;
+    }
+
     setMotorPWM(speed);
 }

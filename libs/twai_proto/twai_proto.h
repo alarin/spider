@@ -20,14 +20,31 @@ byte 1,2,3,4 param (float angle)
 
 enum TwaiCommand {
     BROADCAST,
-    SET_MOTOR,
+    MOTOR_COMMAND,
     MOTOR_FEEDBACK
 };
 
+enum TwaiMotorCommand {
+    SET_ANGLE,
+    REQUEST_STATUS
+};
+
 typedef struct {
-    uint8_t command;
+    TwaiMotorCommand command;
     float param;
-} motor_commant_t;
+} motor_command_t;
+
+enum MotorState {
+    NORMAL,
+    ENCODER_ERROR,
+    MAX_CURRENT_PROTECTION,
+    MIN_MAX_ANGLE_PROTECTION
+};
+
+typedef struct {
+  MotorState state;
+  float angle;  
+} motor_status_t;
 
 
 uint32_t createMsgId(TwaiCommand cmd, uint8_t legN, uint8_t motorN);

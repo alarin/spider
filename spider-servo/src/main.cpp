@@ -13,6 +13,7 @@
 
 
 #include "config.h"
+#include "twai_proto.h"
 
 #define CONFIG_PRINT_DELAY 100
 #define INPUT_BUFFER_SIZE 100
@@ -32,14 +33,18 @@ void app_main(void)
     MotorDriver motorDriver;
 
     MOTOR_TWAI twai;
-    motor_commant_t motor_cmd;
+    motor_command_t motor_cmd;
 
     motorDriver.setup();    
     twai.setup(LEG_ID, MOTOR_ID);
 
     while (1) { 
         if (twai.receive(&motor_cmd)) {
-            motorDriver.setTargetAngle(motor_cmd.param);
+            if (motor_cmd.command == SET_ANGLE) {
+                motorDriver.setTargetAngle(motor_cmd.param);
+            } else if (motor_cmd.command == REQUEST_STATUS) {
+                twai.sendStatus(motor_status_t {(MotorState) motorDriver.getState(), (float) motorDriver.getCurrentAngle()});
+            }
         }
 
 	    ch = getchar();
@@ -68,6 +73,10 @@ void app_main(void)
                     case 'w':                        
                         ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));
                         break;
+                    case 's':
+                        motorDriver.logInfo();
+                        twai.logStatus();
+                        break;
                 }
                 
                 inputPos = 0;
@@ -76,7 +85,7 @@ void app_main(void)
             }
 	    }                    
         
-        //motorDriver.logInfo();
+        motorDriver.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }
 }

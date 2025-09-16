@@ -10,10 +10,11 @@ extern "C" {
     void app_main(void);
 }
 
-#define CAN_TX_PIN GPIO_NUM_20  // Default CAN TX pin
-#define CAN_RX_PIN GPIO_NUM_21 // Default CAN RX pin
+#define CAN_TX_PIN GPIO_NUM_0  // Default CAN TX pin
+#define CAN_RX_PIN GPIO_NUM_1 // Default CAN RX pin
 
 static const char *TAG = "SPIDER_MAIN_CONTROLLER";
+
 
 void app_main() {
     
@@ -80,11 +81,11 @@ void app_main() {
         }
 
 //            RECEIVE CAN messages (non-blocking)
-            twai_message_t rx_msg;
-            if (twai_receive(&rx_msg, pdMS_TO_TICKS(5000)) == ESP_OK) {
-                ESP_LOGI(TAG, "Received CAN ID: 0x%lx", rx_msg.identifier);
-                ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
-            }
+            // twai_message_t rx_msg;
+            // if (twai_receive(&rx_msg, pdMS_TO_TICKS(5000)) == ESP_OK) {
+            //     ESP_LOGI(TAG, "Received CAN ID: 0x%lx", rx_msg.identifier);
+            //     ESP_LOG_BUFFER_HEX(TAG, rx_msg.data, rx_msg.data_length_code);
+            // }
 
         
         // if (twai_read_alerts(&alerts, pdMS_TO_TICKS(1000)) == ESP_OK) {
