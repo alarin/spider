@@ -85,7 +85,7 @@ void app_main(void)
             }
 	    }                    
         
-        motorDriver.logInfo();
+        //motorDriver.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }
 }

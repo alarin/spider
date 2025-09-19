@@ -6,7 +6,7 @@ void MOTOR_TWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num
     _legn = legn;
     _motorn = motorn;
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(tx_pin, rx_pin, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_25KBITS(); // 500kbps (common CAN speed)
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // 500kbps (common CAN speed)
 
     twai_filter_config_t f_config = createMotorFilter(_legn, _motorn);
     //twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
