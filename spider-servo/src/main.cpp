@@ -7,7 +7,6 @@
 #include "esp_log.h"
 #include "sdkconfig.h"
 
-#include "QuickPID.h"
 #include "motordriver/motordriver.h"
 #include "twai/twai.h"
 

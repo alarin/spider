@@ -18,6 +18,7 @@ byte 1,2,3,4 param (float angle)
 
 */
 
+#pragma pack(push, 1)
 enum TwaiCommand {
     BROADCAST,
     MOTOR_COMMAND,
@@ -43,9 +44,11 @@ enum MotorState {
 
 typedef struct {
   MotorState state;
-  float angle;  
+  float angle;
 } motor_status_t;
-
+#pragma pack(pop)
+static_assert(sizeof(motor_command_t) <= 8, "TWAI payload too big");
+static_assert(sizeof(motor_status_t)  <= 8, "TWAI payload too big");
 
 uint32_t createMsgId(TwaiCommand cmd, uint8_t legN, uint8_t motorN);
 twai_filter_config_t createMotorFilter(uint8_t legN, uint8_t motorN);

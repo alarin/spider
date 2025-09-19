@@ -85,7 +85,7 @@ class MotorDriver {
         
         void compute();
         void pwmInit();
-        void setMotorPWM(float duty_cycle);        
+        void setMotorPWM(float duty_cycle);       
         float readCurrent();
 
         void setSpeedAndDirection();

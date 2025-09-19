@@ -3,7 +3,7 @@
 #include "driver/ledc.h"
 #include "esp_log.h"
 #include "utils.h"
-
+#include "math.h"
 
 void MotorDriver::setTargetAngle(double angle) {
     if (angle < _min_angle) {
@@ -55,7 +55,9 @@ void MotorDriver::setup(double min_angle, double max_angle) {
         ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
         _state = State::ENCODER_ERROR;
     }
-    _target_angle = _current_angle;
+    _min_angle = min_angle;
+    _max_angle = max_angle;
+    setTargetAngle(_current_angle);
 
     ESP_LOGI(TAG, "Setting up, pins..");
     gpio_reset_pin(PIN_MOTOR_DIR);
@@ -74,7 +76,7 @@ void MotorDriver::setup(double min_angle, double max_angle) {
     setMotorPWM(0);
 
     positionPID.SetSampleTimeUs(SAMPLE_TIME_US);
-    positionPID.SetOutputLimits(0, OUTPUT_MID_POINT*2);
+    positionPID.SetOutputLimits(-OUTPUT_MID_POINT, OUTPUT_MID_POINT);
     positionPID.SetMode(QuickPID::Control::automatic);
 
     ESP_LOGI(TAG, "Settings up tasks");
@@ -190,20 +192,10 @@ void MotorDriver::setMotorPWM(float duty_cycle) {
 }
 
 void MotorDriver::setSpeedAndDirection() {
-    bool direction;
-    uint8_t speed;
+    bool direction = (_pid_output > 0.f);
+    float duty = fabsf(_pid_output) / OUTPUT_MID_POINT;
+    if (duty < 0.12f) duty = 0.f;
 
-    if (_pid_output > OUTPUT_MID_POINT) {
-        direction = true;
-        speed = _pid_output - OUTPUT_MID_POINT;
-    } else {
-        direction = false;
-        speed = OUTPUT_MID_POINT - _pid_output - 2;
-    }
-    if ((speed) < 30) {
-        speed = 0;
-    }
-    // encoder.setSpeedAndDirection(direction, speed);
     gpio_set_level(PIN_MOTOR_DIR, direction);
 
     if ((_current_angle <= _min_angle && !direction)
@@ -212,7 +204,7 @@ void MotorDriver::setSpeedAndDirection() {
             ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
             _state = MIN_MAX_ANGLE_PROTECTION;
         }
-        speed = 0;
+        duty = 0;
     }
 
         //test current
@@ -222,8 +214,8 @@ void MotorDriver::setSpeedAndDirection() {
             ESP_LOGE(TAG, "Too much current, stopping %f, limit %f", _current, MAX_CURRENT);
             _state = MAX_CURRENT_PROTECTION;
         }
-        speed = 0;
+        duty = 0;
     }
 
-    setMotorPWM(speed);
+    setMotorPWM(duty);
 }
