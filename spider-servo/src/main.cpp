@@ -34,7 +34,7 @@ void app_main(void)
     MOTOR_TWAI twai;
     motor_command_t motor_cmd;
 
-    motorDriver.setup();    
+    motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
     twai.setup(LEG_ID, MOTOR_ID);
 
     while (1) { 
@@ -84,7 +84,7 @@ void app_main(void)
             }
 	    }                    
         
-        //motorDriver.logInfo();
+        motorDriver.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }
 }

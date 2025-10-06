@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "utils.h"
 #include "math.h"
+#include "esp_timer.h"
 
 void MotorDriver::setTargetAngle(double angle) {
     if (angle < _min_angle) {
@@ -80,14 +81,21 @@ void MotorDriver::setup(double min_angle, double max_angle) {
     positionPID.SetMode(QuickPID::Control::automatic);
 
     ESP_LOGI(TAG, "Settings up tasks");
-    xTaskCreate(
-        MotorDriver::computeTask,    // Function that should be called
-        "Compute PID",   // Name of the task (for debugging)
-        10000,            // Stack size (bytes)
-        this,      // Parameter to pass
-        10,               // Task priority
-        NULL             // Task handle
-    );        
+    // xTaskCreate(
+    //     MotorDriver::computeTask,    // Function that should be called
+    //     "Compute PID",   // Name of the task (for debugging)
+    //     10000,            // Stack size (bytes)
+    //     this,      // Parameter to pass
+    //     10,               // Task priority
+    //     NULL             // Task handle
+    // );
+    esp_timer_handle_t ctrl_timer;
+    esp_timer_create_args_t args{
+        .callback = [](void* arg){ static_cast<MotorDriver*>(arg)->compute(); },
+        .arg = this, .name = "ctrl"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&args, &ctrl_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(ctrl_timer, SAMPLE_TIME_US));    
 }
 
 double MotorDriver::getCurrentAngle() {
@@ -95,44 +103,45 @@ double MotorDriver::getCurrentAngle() {
 }
 
 void MotorDriver::logInfo() {
-    ESP_LOGI(TAG, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, current: %.2f, p %.2f, i %.2f, d %.2f", 
-        _state, _current_angle, _target_angle, _pid_output, _current, positionPID.GetKp(), positionPID.GetKi(), positionPID.GetKd());
+    ESP_LOGI(TAG, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, duty: %.2f, current: %.2f, p %.2f, i %.2f, d %.2f", 
+        _state, _current_angle, _target_angle, _pid_output, _last_duty_cycle,
+        _current, positionPID.GetKp(), positionPID.GetKi(), positionPID.GetKd());
 }
 
 void MotorDriver::_tune_cycle() {
-    if (_tuning > 0) {
-        if (_tuning_cycle >= TUNING_CYCLES) {
-            if (_tuning == 1) {
-                ESP_LOGE(TAG, "Tuning: found min/max angles (%.2f, %.2f) calcuating Tu", _tuning_min_angle, _tuning_max_angle);
-                _tuning = 2;
-            }
-            if (_min_angle_t != 0 && _max_angle_t != 0) {            
-                double ku = positionPID.GetKp();
-                double tu = abs((int64_t) _min_angle_t - (int64_t) _max_angle_t)/1000.0;
-                double p = 0.6 * ku;
-                double i = 1.2 * ku/tu;
-                double d = 0.075 * ku * tu;
-                ESP_LOGE(TAG, "Tuning finished Ku %.2f, Tu %.4f, p %.4f, i %.4f, d %.4f", ku, tu, p, i, d);
-                positionPID.SetTunings(p, i, d);
-                _tuning = 0;
-            } else {
-                if (abs(_current_angle - _tuning_min_angle) <= 0.1) {
-                    _min_angle_t = millis();
-                }
-                if (abs(_current_angle - _tuning_max_angle) <= 0.1) {
-                    _max_angle_t = millis();
-                }
-            }
-        } else if (_tuning_cycle >= TUNING_CYCLES/2) {
-            if (_current_angle < _tuning_min_angle) {
-                _tuning_min_angle = _current_angle;
-            } 
-            if (_current_angle > _tuning_max_angle) {
-                _tuning_max_angle = _current_angle;
-            }
-        }
-        _tuning_cycle++;
-    }
+    // if (_tuning > 0) {
+    //     if (_tuning_cycle >= TUNING_CYCLES) {
+    //         if (_tuning == 1) {
+    //             ESP_LOGE(TAG, "Tuning: found min/max angles (%.2f, %.2f) calcuating Tu", _tuning_min_angle, _tuning_max_angle);
+    //             _tuning = 2;
+    //         }
+    //         if (_min_angle_t != 0 && _max_angle_t != 0) {            
+    //             double ku = positionPID.GetKp();
+    //             double tu = abs((int64_t) _min_angle_t - (int64_t) _max_angle_t)/1000.0;
+    //             double p = 0.6 * ku;
+    //             double i = 1.2 * ku/tu;
+    //             double d = 0.075 * ku * tu;
+    //             ESP_LOGE(TAG, "Tuning finished Ku %.2f, Tu %.4f, p %.4f, i %.4f, d %.4f", ku, tu, p, i, d);
+    //             positionPID.SetTunings(p, i, d);
+    //             _tuning = 0;
+    //         } else {
+    //             if (abs(_current_angle - _tuning_min_angle) <= 0.1) {
+    //                 _min_angle_t = millis();
+    //             }
+    //             if (abs(_current_angle - _tuning_max_angle) <= 0.1) {
+    //                 _max_angle_t = millis();
+    //             }
+    //         }
+    //     } else if (_tuning_cycle >= TUNING_CYCLES/2) {
+    //         if (_current_angle < _tuning_min_angle) {
+    //             _tuning_min_angle = _current_angle;
+    //         } 
+    //         if (_current_angle > _tuning_max_angle) {
+    //             _tuning_max_angle = _current_angle;
+    //         }
+    //     }
+    //     _tuning_cycle++;
+    // }
 }
 
 void MotorDriver::compute() {
@@ -186,6 +195,7 @@ void MotorDriver::pwmInit() {
 }
 
 void MotorDriver::setMotorPWM(float duty_cycle) {
+    _last_duty_cycle = duty_cycle;
     const uint32_t max_duty = (1 << LEDC_TIMER_13_BIT) - 1; // 8191 for 13-bit
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty_cycle * max_duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
