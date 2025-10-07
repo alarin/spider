@@ -28,21 +28,11 @@
 #include "driver/twai.h"
 #include "driver/gpio.h"
 
+#include "config.h"
+#include "led/led.h"
 /* --------------------- Definitions and static variables ------------------ */
 
-#define DEVICE_ID               2
-#define SELF_TEST               1
 
-#if DEVICE_ID == 1
-#define TX_GPIO_NUM             GPIO_NUM_20 //GPIO_NUM_0
-#define RX_GPIO_NUM             GPIO_NUM_21 //GPIO_NUM_1
-#else
-#define TX_GPIO_NUM             GPIO_NUM_21
-#define RX_GPIO_NUM             GPIO_NUM_20
-#endif
-
-
-#define LED_GPIO                GPIO_NUM_8
 #define NO_OF_MSGS              100
 #define NO_OF_ITERS             100
 #define TX_TASK_PRIO            8      //Sending task priority
@@ -52,12 +42,14 @@
 #define EXAMPLE_TAG             "TWAI"
 #define TAG             "TWAI"
 
+
+
 static const twai_timing_config_t t_config = TWAI_TIMING_CONFIG_25KBITS();
 //Filter all other IDs except MSG_ID
-static const twai_filter_config_t f_config = {.acceptance_code = uint32_t(MSG_ID << 21),
-                                             .acceptance_mask = ~(TWAI_STD_ID_MASK << 21),
-                                             .single_filter = true};
-// static const twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+// static const twai_filter_config_t f_config = {.acceptance_code = uint32_t(MSG_ID << 21),
+//                                              .acceptance_mask = ~(TWAI_STD_ID_MASK << 21),
+//                                              .single_filter = true};
+static const twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 //Set to NO_ACK mode due to self testing with single module
 #ifdef SELF_TEST
 static const twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NO_ACK);
@@ -121,16 +113,6 @@ static void logStatus() {
     }    
 }
 
-static void blink() {
-    // Turn LED ON
-    gpio_set_level(LED_GPIO, 0);
-    vTaskDelay(500 / portTICK_PERIOD_MS);  // Delay 1 second
-
-    // Turn LED OFF
-    gpio_set_level(LED_GPIO, 1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);  // Delay 1 second    
-}
-
 static void twai_transmit_task(void *arg)
 {
     twai_message_t tx_msg;
@@ -139,13 +121,16 @@ static void twai_transmit_task(void *arg)
     #ifdef SELF_TEST
     tx_msg.flags = TWAI_MSG_FLAG_SELF;
     #endif
-    for (int iter = 0; iter < NO_OF_ITERS; iter++) {
+    for (int iter = 0; iter < NO_OF_ITERS; iter++) {        
         xSemaphoreTake(tx_sem, portMAX_DELAY);
         for (int i = 0; i < NO_OF_MSGS; i++) {
+            blink();
             //Transmit messages using self reception request
             tx_msg.data[0] = DEVICE_ID;
             tx_msg.data[1] = i;
             ESP_ERROR_CHECK(twai_transmit(&tx_msg, 1000));
+            ESP_LOGI(TAG, "Msg sent id: 0x%lx", tx_msg.identifier);
+            ESP_LOG_BUFFER_HEX(TAG, tx_msg.data, tx_msg.data_length_code);
             ESP_LOGE(EXAMPLE_TAG, "SENT - Data = %d: %d", tx_msg.data[0], tx_msg.data[1]);
             logStatus();
             vTaskDelay(pdMS_TO_TICKS(2000));
@@ -164,6 +149,8 @@ static void twai_receive_task(void *arg)
             //Receive message and print message data
             esp_err_t status = twai_receive(&rx_message, 100);
             if (status == ESP_OK) {
+                ESP_LOGI(EXAMPLE_TAG, "Msg recieved id: 0x%lx", rx_message.identifier);
+                ESP_LOG_BUFFER_HEX(EXAMPLE_TAG, rx_message.data, rx_message.data_length_code);
                 ESP_LOGE(EXAMPLE_TAG, "RECEIVED - Data = %d: %d", rx_message.data[0], rx_message.data[1]);
                 blink();
             } else if (status != ESP_ERR_TIMEOUT) {
@@ -200,10 +187,7 @@ static void twai_control_task(void *arg)
 
 void app_main(void)
 {    
-    gpio_reset_pin(LED_GPIO);
-    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level(LED_GPIO, 1);
-
+    ledInit();
     //Create tasks and synchronization primitives
     tx_sem = xSemaphoreCreateBinary();
     rx_sem = xSemaphoreCreateBinary();
