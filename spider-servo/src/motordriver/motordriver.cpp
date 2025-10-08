@@ -6,6 +6,8 @@
 #include "math.h"
 #include "esp_timer.h"
 
+#include "config.h"
+
 void MotorDriver::setTargetAngle(double angle) {
     if (angle < _min_angle) {
         angle = _min_angle;

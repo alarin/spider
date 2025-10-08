@@ -48,16 +48,7 @@ class MotorDriver {
         static constexpr uint16_t TUNING_CYCLES = 500;
  
         static constexpr uint8_t OUTPUT_MID_POINT = 255;
-        static constexpr double MAX_CURRENT = 0.5;
-
-        static constexpr adc1_channel_t PIN_CURRENT_SENSOR = ADC1_CHANNEL_6;
-        static constexpr gpio_num_t PIN_MOTOR_PWM = GPIO_NUM_4;
-        static constexpr gpio_num_t PIN_MOTOR_DIR = GPIO_NUM_5;
-        static constexpr gpio_num_t PIN_MOTOR_BRAKE = GPIO_NUM_6;
-        
-        static constexpr gpio_num_t PIN_MT6701_MISO = GPIO_NUM_14;
-        static constexpr gpio_num_t PIN_MT6701_SCLK = GPIO_NUM_15;
-        static constexpr gpio_num_t PIN_MT6701_CS = GPIO_NUM_16;
+        static constexpr double MAX_CURRENT = 3;
 
         static constexpr double ANGLE_PROTECTION_DIFF = 3;
 

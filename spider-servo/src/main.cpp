@@ -35,7 +35,7 @@ void app_main(void)
     motor_command_t motor_cmd;
 
     motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
-    twai.setup(LEG_ID, MOTOR_ID);
+    twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
 
     while (1) { 
         if (twai.receive(&motor_cmd)) {
