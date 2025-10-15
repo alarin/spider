@@ -16,6 +16,7 @@ void MotorDriver::setTargetAngle(double angle) {
         angle = _max_angle;
     }
     ESP_LOGI(TAG, "Set target angle to %lf", angle);
+    setState(State::NORMAL);
     _target_angle = angle;
 }
 
@@ -53,11 +54,16 @@ void MotorDriver::startTuning() {
 void MotorDriver::setup(double min_angle, double max_angle) {
     ESP_LOGI(TAG, "Setting up..");
     encoder.begin(PIN_MT6701_SCLK, PIN_MT6701_MISO, PIN_MT6701_CS);
-    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
+    bool result = false;
+    for (int i=0; i < 5; i++) {
+        result = encoder.read(&_current_angle, NULL, NULL, NULL);    
+    }
     if (!result) {        
-        ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
+        ESP_LOGE(TAG, "Encoder CRC ERROR, cannot detect current angle");
         _state = State::ENCODER_ERROR;
     }
+    assert(result);
+
     _min_angle = min_angle;
     _max_angle = max_angle;
     setTargetAngle(_current_angle);
@@ -146,34 +152,78 @@ void MotorDriver::_tune_cycle() {
     // }
 }
 
-void MotorDriver::compute() {
-    //read angle
-    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
-    if (!result) {        
-        if (_state != State::ENCODER_ERROR) {
-            ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
-            _state = State::ENCODER_ERROR;
-        }
-        setMotorPWM(0);
+void MotorDriver::setState(State new_state) {
+    if (_state == new_state) {
+        //do nothing
         return;
     }
-    _state = State::NORMAL;
 
-    if (_tuning > 0) {
-        _tune_cycle();
+    if (new_state == State::ENCODER_ERROR) {
+        ESP_LOGE(TAG, "Encoder CRC ERROR, stopping");
     }
 
-    positionPID.Compute();
-    setSpeedAndDirection();    
-} 
+    if (new_state == State::MIN_MAX_ANGLE_PROTECTION) {
+        ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
+    } 
 
-void MotorDriver::computeTask(void *pvParameters) {
-    for(;;){
-        MotorDriver *l_pThis = (MotorDriver *) pvParameters;   
-        l_pThis->compute();
-        vTaskDelay(COMPUTE_TASK_DELAY_MS / portTICK_PERIOD_MS);
+    if (new_state == State::MAX_CURRENT_PROTECTION) {
+        ESP_LOGE(TAG, "Too much current, stopping %f, limit %f", _current, MAX_CURRENT);
+    }
+
+    if (new_state == State::NORMAL) {
+        ESP_LOGE(TAG, "Returned to normal state");
+    }
+
+    _state = new_state;
+
+    if (_state != State::NORMAL) {
+        gpio_set_level(PIN_MOTOR_BRAKE, true);
+    } else {
+        gpio_set_level(PIN_MOTOR_BRAKE, false);
     }
 }
+
+
+void MotorDriver::compute() {
+    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
+    if (!result) {        
+        setState(State::ENCODER_ERROR);
+    }
+    // if (_tuning > 0) {
+    //     _tune_cycle();
+    // }
+
+    positionPID.Compute();
+
+    bool direction = (_pid_output > 0.f);
+    float duty = fabsf(_pid_output) / OUTPUT_MID_POINT;
+    if (duty < 0.12f) duty = 0.f;    
+
+    if ((_current_angle <= _min_angle && !direction)
+        || (_current_angle >= _max_angle && direction)) {
+            setState(MIN_MAX_ANGLE_PROTECTION);
+    }
+
+    _current = currentSensor.readCurrent();
+    if (_current >= MAX_CURRENT) {
+        setState(MAX_CURRENT_PROTECTION);
+    }
+
+    if (_state == State::NORMAL) {
+        gpio_set_level(PIN_MOTOR_DIR, direction);
+        setMotorPWM(duty);
+    } else {
+        setMotorPWM(0);
+    }
+} 
+
+// void MotorDriver::computeTask(void *pvParameters) {
+//     for(;;){
+//         MotorDriver *l_pThis = (MotorDriver *) pvParameters;   
+//         l_pThis->compute();
+//         vTaskDelay(COMPUTE_TASK_DELAY_MS / portTICK_PERIOD_MS);
+//     }
+// }
 
 void MotorDriver::pwmInit() {
     ledc_timer_config_t timer_cfg = {
@@ -201,33 +251,4 @@ void MotorDriver::setMotorPWM(float duty_cycle) {
     const uint32_t max_duty = (1 << LEDC_TIMER_13_BIT) - 1; // 8191 for 13-bit
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty_cycle * max_duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-}
-
-void MotorDriver::setSpeedAndDirection() {
-    bool direction = (_pid_output > 0.f);
-    float duty = fabsf(_pid_output) / OUTPUT_MID_POINT;
-    if (duty < 0.12f) duty = 0.f;
-
-    gpio_set_level(PIN_MOTOR_DIR, direction);
-
-    if ((_current_angle <= _min_angle && !direction)
-        || (_current_angle >= _max_angle && direction)) {
-        if (_state != MIN_MAX_ANGLE_PROTECTION) {
-            ESP_LOGE(TAG, "Max or min angle protection, stopping %f", _current_angle);
-            _state = MIN_MAX_ANGLE_PROTECTION;
-        }
-        duty = 0;
-    }
-
-        //test current
-    _current = currentSensor.readCurrent();
-    if (_current >= MAX_CURRENT) {
-        if (_state != MAX_CURRENT_PROTECTION) {
-            ESP_LOGE(TAG, "Too much current, stopping %f, limit %f", _current, MAX_CURRENT);
-            _state = MAX_CURRENT_PROTECTION;
-        }
-        duty = 0;
-    }
-
-    setMotorPWM(duty);
 }

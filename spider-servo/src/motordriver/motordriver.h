@@ -73,7 +73,8 @@ class MotorDriver {
         ACS712 currentSensor;
         MT6701 encoder;
         QuickPID positionPID;
-        
+
+        void setState(State new_state);
         void compute();
         void pwmInit();
         void setMotorPWM(float duty_cycle);       
