@@ -13,6 +13,10 @@
 //   return (uint64_t)(xTaskGetTickCount() * portTICK_PERIOD_MS * 1000);
 // }
 
+void MT6701::setSpeedAndDirection(bool direction, uint16_t speed){
+
+}
+
 void MT6701::begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) {
     ESP_LOGI(TAG, "Setting up...");
     _csPin = ss;

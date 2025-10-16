@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 
-uint64_t micros();
-uint64_t millis();
+uint64_t Mmicros();
+uint64_t Mmillis();
 
 #endif

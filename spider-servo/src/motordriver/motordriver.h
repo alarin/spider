@@ -13,14 +13,13 @@ class MotorDriver {
             MIN_MAX_ANGLE_PROTECTION
         };
 
-        MotorDriver() : 
-            encoder(), 
+        MotorDriver(MT6701& enc) : 
+            encoder(enc), 
             positionPID(&_current_angle, &_pid_output, &_target_angle, Kp, Ki, Kd, QuickPID::Action::direct) {
             _state = State::NORMAL;
         }
         
         void setup(double min_angle = 0, double max_angle = 300);
-        static void computeTask(void *pvParameters);
 
         void setTargetAngle(double angle);
         double getCurrentAngle();
@@ -31,7 +30,7 @@ class MotorDriver {
 
         float calibrateCurrent(float realCurrent);
 
-        void logInfo();
+        void logInfo(bool skipSameLogs = true);
 
         void startTuning();
 
@@ -44,7 +43,6 @@ class MotorDriver {
         static constexpr double Ki = 28.36;
         static constexpr double Kd = 0.54;
         static constexpr uint32_t SAMPLE_TIME_US = 10 * 1000;
-        static constexpr uint32_t COMPUTE_TASK_DELAY_MS = 10;
         static constexpr uint16_t TUNING_CYCLES = 500;
  
         static constexpr uint8_t OUTPUT_MID_POINT = 255;
@@ -62,8 +60,8 @@ class MotorDriver {
         float _last_duty_cycle = 0;
 
         State _state;
-        double _min_angle = 115;
-        double _max_angle = 290;
+        double _min_angle;
+        double _max_angle;
         
         double _current;
         double _current_angle;
@@ -71,15 +69,16 @@ class MotorDriver {
         double _pid_output;
 
         ACS712 currentSensor;
-        MT6701 encoder;
+        MT6701& encoder;
         QuickPID positionPID;
+
+        //for logging not doubling
+        char lastLogMessage[254];
 
         void setState(State new_state);
         void compute();
         void pwmInit();
         void setMotorPWM(float duty_cycle);       
-        float readCurrent();
 
-        void setSpeedAndDirection();
         void _tune_cycle();
 };

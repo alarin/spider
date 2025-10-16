@@ -17,9 +17,9 @@ class MT6701 {
       // SPISensor(): angleKF(1, 1, 0.01) {
       // }
 
-      void begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss);
-  
-      bool read(double *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss );
+      virtual void begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss);
+      virtual bool read(double *angle, mt6701_status_t *field_status, bool *button_pushed, bool *track_loss );
+      virtual void setSpeedAndDirection(bool direction, uint16_t speed); //does nothing for compatability with MT6701_Emulator
     protected:
       uint32_t readData();
     private:

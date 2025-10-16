@@ -29,11 +29,13 @@ void app_main(void)
     char inputBuffer[INPUT_BUFFER_SIZE + 1]; 
     double commandValue;
     uint8_t inputPos = 0;
-    MotorDriver motorDriver;
+    MT6701Emulator encoderEmulator;
+    MotorDriver motorDriver(encoderEmulator);
 
     MOTOR_TWAI twai;
     motor_command_t motor_cmd;
 
+    
     motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
     twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
 
@@ -73,7 +75,7 @@ void app_main(void)
                         ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));
                         break;
                     case 's':
-                        motorDriver.logInfo();
+                        motorDriver.logInfo(false);
                         twai.logStatus();
                         break;
                 }
