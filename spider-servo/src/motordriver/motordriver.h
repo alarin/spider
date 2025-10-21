@@ -4,6 +4,8 @@
 #include "QuickPID.h"
 #include "driver/gpio.h"
 
+#include "tuning/oscilation_detector.h"
+
 class MotorDriver {
     public:
         enum State {
@@ -15,7 +17,8 @@ class MotorDriver {
 
         MotorDriver(MT6701& enc) : 
             encoder(enc), 
-            positionPID(&_current_angle, &_pid_output, &_target_angle, Kp, Ki, Kd, QuickPID::Action::direct) {
+            positionPID(&_current_angle, &_pid_output, &_target_angle, Kp, Ki, Kd, QuickPID::Action::direct),
+            oscilationDetector() {
             _state = State::NORMAL;
         }
         
@@ -39,9 +42,13 @@ class MotorDriver {
     private:
         static constexpr const char* TAG = "spider-servo-motor-driver";
         
-        static constexpr double Kp = 7.8;
-        static constexpr double Ki = 28.36;
-        static constexpr double Kd = 0.54;
+        // static constexpr double Kp = 7.8;
+        // static constexpr double Ki = 28.36;
+        // static constexpr double Kd = 0.54;
+        static constexpr double Kp = 1;
+        static constexpr double Ki = 0;
+        static constexpr double Kd = 0;
+        
         static constexpr uint32_t SAMPLE_TIME_US = 10 * 1000;
         static constexpr uint16_t TUNING_CYCLES = 500;
  
@@ -50,6 +57,8 @@ class MotorDriver {
 
         static constexpr double ANGLE_PROTECTION_DIFF = 3;
 
+
+        bool hand_tuning = false;
 
         uint8_t _tuning = 0;
         uint32_t _tuning_cycle = 0;
@@ -71,6 +80,7 @@ class MotorDriver {
         ACS712 currentSensor;
         MT6701& encoder;
         QuickPID positionPID;
+        AmplitudeStabilityAnalyzer oscilationDetector;
 
         //for logging not doubling
         char lastLogMessage[254];

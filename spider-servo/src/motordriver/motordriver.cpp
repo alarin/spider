@@ -18,6 +18,7 @@ void MotorDriver::setTargetAngle(double angle) {
     }
     ESP_LOGI(TAG, "Set target angle to %lf", angle);
     setState(State::NORMAL);
+    oscilationDetector.reset();
     _target_angle = angle;
 }
 
@@ -101,25 +102,48 @@ double MotorDriver::getCurrentAngle() {
 }
 
 void MotorDriver::logInfo(bool skipSameLogs) {
-    char currentMessage[254];
-    sprintf(currentMessage, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, duty: %.2f, current: %.2f", _state, _current_angle, _target_angle, _pid_output, _last_duty_cycle, _current);
-    if (!skipSameLogs || strcmp(currentMessage, lastLogMessage) != 0) {
-        ESP_LOGI(TAG, "%s", currentMessage);
-        strncpy(lastLogMessage, currentMessage, 254);
-    }    
+    //char currentMessage[254];
+    // sprintf(currentMessage, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, duty: %.2f, current: %.2f", _state, _current_angle, _target_angle, _pid_output, _last_duty_cycle, _current);
+    // if (!skipSameLogs || strcmp(currentMessage, lastLogMessage) != 0) {
+    //     ESP_LOGI(TAG, "%s", currentMessage);
+    //     strncpy(lastLogMessage, currentMessage, 254);
+    // }    
+    if (hand_tuning) {
+        StabilityResult result = oscilationDetector.analyzeAmplitudeStability();   
+        if (result.peak_data.period != 0) {
+            ESP_LOGE(TAG, "Analysis complete: stable=%s, slope=%.4f, CV=%.4f, period=%.3fs",
+                result.is_stable ? "true" : "false", 
+                result.amplitude_slope, 
+                result.amplitude_cv,
+                result.peak_data.period);
+            for(int i=0; i < result.peak_data.amplitudes.size(); i++) {
+                ESP_LOGE(TAG, "%.2f", result.peak_data.amplitudes[i]);
+            }
+        }
+        if (result.is_stable) {
+            float Ku = positionPID.GetKp();
+            float Tu = result.peak_data.period;       
+            //positionPID.SetTunings(0.33 * Ku, 0.66 * Ku/Tu, 0.11 * Ku * Tu); //some overshoot
+            positionPID.SetTunings(0.20 * Ku, 0.4 * Ku/Tu, 0.066 * Ku * Tu); //no overshoot
+            hand_tuning = false;
+        }
+    }
+    ESP_LOGI(TAG, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, duty: %.2f, current: %.2f, p: %.2f, i: %.2f, d: %.2f,", 
+        _state, _current_angle, _target_angle, _pid_output, _last_duty_cycle, _current, positionPID.GetKp(), positionPID.GetKi(), positionPID.GetKd());
 }
 
 void MotorDriver::startTuning() {
-    _tuning = 1;
-    _tuning_cycle = 0;
-    _tuning_max_angle = 0;
-    _tuning_min_angle = 360;
-    _min_angle_t = 0;
-    _max_angle_t = 0;    
-    positionPID.SetTunings(positionPID.GetKp(), 0, 0);
-    setTargetAngle(0);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    setTargetAngle(100);
+    // _tuning = 1;
+    // _tuning_cycle = 0;
+    // _tuning_max_angle = 0;
+    // _tuning_min_angle = 360;
+    // _min_angle_t = 0;
+    // _max_angle_t = 0;    
+    // positionPID.SetTunings(positionPID.GetKp(), 0, 0);
+    // setTargetAngle(0);
+    // vTaskDelay(2000 / portTICK_PERIOD_MS);
+    // setTargetAngle(100);
+    hand_tuning = true;
 }
 
 /*
@@ -205,10 +229,14 @@ void MotorDriver::setState(State new_state) {
 
 
 void MotorDriver::compute() {
-    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);
-    if (!result) {        
-        setState(State::ENCODER_ERROR);
+    bool result = encoder.read(&_current_angle, NULL, NULL, NULL);    
+    if (!result) {
+        if (!encoder.read(&_current_angle, NULL, NULL, NULL)) {
+            setState(State::ENCODER_ERROR);
+        }
     }
+    oscilationDetector.addData(_current_angle, Mmillis()/1000.0);
+
     if (_tuning > 0) {
         _tune_cycle();
     }

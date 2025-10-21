@@ -14,7 +14,7 @@
 #include "config.h"
 #include "twai_proto.h"
 
-#define CONFIG_PRINT_DELAY 100
+#define CONFIG_PRINT_DELAY 1000
 #define INPUT_BUFFER_SIZE 100
 
 static const char *TAG = "spider-servo";
@@ -29,24 +29,25 @@ void app_main(void)
     char inputBuffer[INPUT_BUFFER_SIZE + 1]; 
     double commandValue;
     uint8_t inputPos = 0;
-    MT6701Emulator encoderEmulator;
-    MotorDriver motorDriver(encoderEmulator);
+    MT6701Emulator encoderEmulator(1, 0.5);
+    MT6701 encoder;
+    MotorDriver motorDriver(encoder);
 
     MOTOR_TWAI twai;
     motor_command_t motor_cmd;
 
     
     motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
-    twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
+    // twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
 
     while (1) { 
-        if (twai.receive(&motor_cmd)) {
-            if (motor_cmd.command == SET_ANGLE) {
-                motorDriver.setTargetAngle(motor_cmd.param);
-            } else if (motor_cmd.command == REQUEST_STATUS) {
-                twai.sendStatus(motor_status_t {(MotorState) motorDriver.getState(), (float) motorDriver.getCurrentAngle()});
-            }
-        }
+        // if (twai.receive(&motor_cmd)) {
+        //     if (motor_cmd.command == SET_ANGLE) {
+        //         motorDriver.setTargetAngle(motor_cmd.param);
+        //     } else if (motor_cmd.command == REQUEST_STATUS) {
+        //         twai.sendStatus(motor_status_t {(MotorState) motorDriver.getState(), (float) motorDriver.getCurrentAngle()});
+        //     }
+        // }
 
 	    ch = getchar();
 	    if (ch != 0xFF) {
