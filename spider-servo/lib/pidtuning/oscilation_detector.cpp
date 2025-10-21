@@ -18,8 +18,9 @@ void AmplitudeStabilityAnalyzer::reset() {
     _time.clear();
 }
 
-StabilityResult AmplitudeStabilityAnalyzer::analyzeAmplitudeStability(float sampling_rate) {
-    
+StabilityResult AmplitudeStabilityAnalyzer::analyzeAmplitudeStability(float vsampling_rate) {
+    sampling_rate = vsampling_rate;
+
     StabilityResult result = {
         .is_stable = false,
         .amplitude_slope = 0.0f,
@@ -31,16 +32,16 @@ StabilityResult AmplitudeStabilityAnalyzer::analyzeAmplitudeStability(float samp
     if (_angles.size() != _time.size() || _angles.size() < 20) {
         return result;
     }
-    for(int i=0; i < _angles.size(); i++) {
-        ESP_LOGE(TAG, "%.2f : %.2f", _time[i], _angles[i]);
-    }
+    // for(int i=0; i < _angles.size(); i++) {
+    //     ESP_LOGE(TAG, "%.2f : %.2f", _time[i], _angles[i]);
+    // }
     
     // Find peaks in the signal
     _peak_data = findPeaks();
     
     // Need at least 3 peaks for meaningful analysis
     if (_peak_data.amplitudes.size() < 6) {
-        // ESP_LOGE(TAG, "Not enought peaks detected %d, datapoints %d", _peak_data.amplitudes.size(), _angles.size());
+        ESP_LOGE(TAG, "Not enought peaks detected %d, datapoints %d", _peak_data.amplitudes.size(), _angles.size());
         // for(int i=0; i < _angles.size(); i++) {
         //     ESP_LOGE(TAG, "%.2f", _angles[i]);
         // }
@@ -78,9 +79,16 @@ PeakData AmplitudeStabilityAnalyzer::findPeaks() {
         
         // Check if current point is greater than neighbors within the minimum distance
         for (int j = 1; j <= min_distance_samples; j++) {
-            if (_angles[i] <= _angles[i - j] || _angles[i] <= _angles[i + j]) {
-                is_peak = false;
-                break;
+            if (j == 1) { //let peak be two-three points
+                if (_angles[i] < _angles[i - j] || _angles[i] < _angles[i + j]) {
+                    is_peak = false;
+                    break;
+                }
+            } else {
+                if (_angles[i] <= _angles[i - j] || _angles[i] <= _angles[i + j]) {
+                    is_peak = false;
+                    break;
+                }
             }
         }
         

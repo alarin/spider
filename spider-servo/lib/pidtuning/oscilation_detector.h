@@ -19,7 +19,7 @@ struct StabilityResult {
 
 class AmplitudeStabilityAnalyzer {
 private:
-    static constexpr float MIN_DISTANCE_S = 0.1f; // Minimum 0.1s between peaks
+    static constexpr float MIN_DISTANCE_S = 0.05f; // Minimum 0.1s between peaks
     static constexpr float STABILITY_SLOPE_THRESHOLD = 0.1f;
     static constexpr float STABILITY_CV_THRESHOLD = 0.2f;
 
