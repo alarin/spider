@@ -91,7 +91,7 @@ void TWAI::requestStatus(uint8_t legn, uint8_t motorn) {
 
     tx_msg.data_length_code = sizeof(motor_command_t);
     tx_msg.identifier = createMsgId(MOTOR_COMMAND, legn, motorn);
-    motor_command_t cmd = {REQUEST_STATUS, 0};
+    motor_command_t cmd = {REQUEST_STATUS, 0};    
     memcpy(&tx_msg.data, &cmd, sizeof(cmd));
     ESP_ERROR_CHECK(twai_transmit(&tx_msg, portMAX_DELAY));
     ESP_LOGI(TAG, "Msg sent id: 0x%lx", tx_msg.identifier);

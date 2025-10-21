@@ -3,15 +3,18 @@
 
 #include <stdlib.h>
 #include "driver/gpio.h"
-#include "driver/adc.h"
-#include "esp_adc_cal.h"
 #include "esp_log.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
 
 class Joystick {
 private:
-    static const uint32_t _x_right_threshold = 3750;
-    static const uint32_t _x_left_threshold = 3000;
-    uint32_t _x;
+    static const int _x_right_threshold = 2500;
+    static const int _x_left_threshold = 2000;
+    adc_oneshot_unit_handle_t _adc_x_handle;
+    adc_cali_handle_t _adc_cali_handle;
+    int _x;
     void _readInputs();
 public:
     void setup();

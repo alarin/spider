@@ -5,6 +5,7 @@
 #include "freertos/semphr.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "memory.h"
 
 #include "driver/gpio.h"
@@ -35,13 +36,17 @@ void processCommand(char* str, char *cmd, uint8_t *params) {
     }
 }
 
+Joystick joystick;
+// static void joistickInput() {
+//     joystick.getX();
+// }
 
 void app_main(void) {
-    Joystick joystick;
+    
     TWAI twai;
     twai.setup();
     joystick.setup();
-
+    // joystick.getX();
 
     uint8_t ch;    
     char inputBuffer[INPUT_BUFFER_SIZE + 1]; 
@@ -52,11 +57,18 @@ void app_main(void) {
     
     //getting initial angle
     motor_status_t motor_status;
-    //twai.requestStatus(1, 1);
-    //assert(twai.receive(&motor_status, 5000));
-    //currentAngle = motor_status.angle;
-    ESP_LOGI(TAG, "Initial motor angle %d", currentAngle);
+    // twai.requestStatus(1, 1);
+    // assert(twai.receive(&motor_status, 5000));
+    // currentAngle = motor_status.angle;
+    // ESP_LOGI(TAG, "Initial motor angle %d", currentAngle);
     
+    // esp_timer_handle_t ctrl_timer;
+    // esp_timer_create_args_t args{
+    //     .callback = [](void* arg){ joistickInput(); },
+    //     .arg = NULL, .name = "joystick"
+    // };
+    // ESP_ERROR_CHECK(esp_timer_create(&args, &ctrl_timer));
+    // ESP_ERROR_CHECK(esp_timer_start_periodic(ctrl_timer, 500*1000));   
 
     while (1) {    
 	    ch = getchar();
@@ -82,13 +94,13 @@ void app_main(void) {
 	    }                    
         // sendAngle(1,1,100);
         // logStatus();
-        
-        if (joystick.getX() != 0) {
+    
+        if (joystick.getX() != 0) {            
+            currentAngle += joystick.getX() * 5;
             ESP_LOGI(TAG, "Sending new angle from joystick %d", currentAngle);
-            currentAngle += joystick.getX();
             twai.sendAngle(1, 1, currentAngle);
         }
-        twai.receive(&motor_status);
+        twai.receive(&motor_status);        
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
