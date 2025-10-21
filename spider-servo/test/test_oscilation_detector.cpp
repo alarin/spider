@@ -3,7 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
 
-#include "motordriver/tuning/oscilation_detector.h"
+#include "oscilation_detector.h"
 
 extern "C" {
     void app_main(void);

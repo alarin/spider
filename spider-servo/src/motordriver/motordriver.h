@@ -1,10 +1,10 @@
-#include "mt6701/mt6701.h"
-#include "mt6701/mt6701_emulator.h"
-#include "currentsensor/ACS712.h"
+#include "mt6701.h"
+#include "mt6701_emulator.h"
+#include "ACS712.h"
 #include "QuickPID.h"
 #include "driver/gpio.h"
 
-#include "tuning/oscilation_detector.h"
+#include "oscilation_detector.h"
 
 class MotorDriver {
     public:
