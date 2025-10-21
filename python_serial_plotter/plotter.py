@@ -77,7 +77,7 @@ class Plotter:
             if var in ['target', 'angle']:
                 if self.plots.get(var) is None:
                     self.plots[var], = self.axes.plot([], [])
-                self.plots[var].set_data(range(self.maxLen), self.parser.vars[var])
+                self.plots[var].set_data(range(self.maxLen), list(reversed(self.parser.vars[var])))
             
         return self.plots.values()
     
@@ -107,7 +107,7 @@ def main():
   MAX_LEN = 500
   # set up animation
   fig = plt.figure()
-  axes = plt.axes(xlim=(0, MAX_LEN), ylim=(0, 360))
+  axes = plt.axes(xlim=(0, MAX_LEN), ylim=(0, 200))
   plotter = Plotter(axes, strPort, MAX_LEN)
   #a0, = ax.plot([], [])  
   #a1, = ax.plot([], [])
