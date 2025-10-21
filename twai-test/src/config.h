@@ -2,12 +2,12 @@
 #define MY_DEFINES_H
 
 #define DEVICE_ID               3
-#define SELF_TEST            
+// #define SELF_TEST            
 
-#if DEVICE_ID == 1
+#if DEVICE_ID == 1   //test device
 #define LED_GPIO                GPIO_NUM_8
-#define TX_GPIO_NUM             GPIO_NUM_20 //GPIO_NUM_0
-#define RX_GPIO_NUM             GPIO_NUM_21 //GPIO_NUM_1
+#define TX_GPIO_NUM             GPIO_NUM_0
+#define RX_GPIO_NUM             GPIO_NUM_1
 #elif DEVICE_ID == 2
 #define LED_GPIO                GPIO_NUM_8
 #define TX_GPIO_NUM             GPIO_NUM_21
