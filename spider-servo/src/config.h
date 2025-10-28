@@ -7,8 +7,13 @@
 static const uint8_t LEG_ID = 1; //1-6
 static const uint8_t MOTOR_ID = 2; //1-3, 1 is near body
 
-static const uint16_t MOTOR_MIN_ANGLE = 0;
-static const uint16_t MOTOR_MAX_ANGLE = 360;
+static const uint16_t MOTOR_MIN_ANGLE = 20;
+static const uint16_t MOTOR_MAX_ANGLE = 150;
+
+static constexpr float P = 7;
+static constexpr float I = 28.36;
+static constexpr float D = 0.54;
+static constexpr float CURRENT_LIMIT = 5;
 
 #ifdef SPIDER_SERVO_C3
 static const gpio_num_t TWAI_TX_PIN = GPIO_NUM_21;

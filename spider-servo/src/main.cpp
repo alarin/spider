@@ -14,7 +14,7 @@
 #include "config.h"
 #include "twai_proto.h"
 
-#define CONFIG_PRINT_DELAY 1000
+#define CONFIG_PRINT_DELAY 500
 #define INPUT_BUFFER_SIZE 100
 
 static const char *TAG = "spider-servo";

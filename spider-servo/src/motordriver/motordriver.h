@@ -4,6 +4,7 @@
 #include "QuickPID.h"
 #include "driver/gpio.h"
 
+#include "config.h"
 #include "oscilation_detector.h"
 
 class MotorDriver {
@@ -45,15 +46,15 @@ class MotorDriver {
         // static constexpr double Kp = 7.8;
         // static constexpr double Ki = 28.36;
         // static constexpr double Kd = 0.54;
-        static constexpr double Kp = 1;
-        static constexpr double Ki = 0;
-        static constexpr double Kd = 0;
+        static constexpr double Kp = P;
+        static constexpr double Ki = I;
+        static constexpr double Kd = D;
         
         static constexpr uint32_t SAMPLE_TIME_US = 10 * 1000;
         static constexpr uint16_t TUNING_CYCLES = 500;
  
         static constexpr uint8_t OUTPUT_MID_POINT = 255;
-        static constexpr double MAX_CURRENT = 3;
+        static constexpr double MAX_CURRENT = CURRENT_LIMIT;
 
         static constexpr double ANGLE_PROTECTION_DIFF = 3;
 
