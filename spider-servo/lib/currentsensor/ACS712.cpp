@@ -1,24 +1,39 @@
 #include "ACS712.h"
 
-#define ADC_ATTEN        ADC_ATTEN_DB_11  // 0-3.1V range
-#define ADC_WIDTH        ADC_WIDTH_BIT_12 // 12-bit resolution
+#define ADC_UNIT ADC_UNIT_1
+#define ATTEN ADC_ATTEN_DB_12
 
-void ACS712::setup(adc1_channel_t pin) {
+void ACS712::setup(adc_channel_t pin) {
     _pin = pin;
-    adc1_config_width(ADC_WIDTH);
-    adc1_config_channel_atten(_pin, ADC_ATTEN);
-    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, 0, &_adc_chars);
+    
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT
+    };
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &_adc_handle));
+
+    adc_oneshot_chan_cfg_t config = {
+        .atten = ATTEN,
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(_adc_handle, _pin, &config));
+    
+    adc_cali_curve_fitting_config_t cali_config = {
+        .unit_id = ADC_UNIT,
+        .atten = ATTEN,
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+    };
+    ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cali_config, &_adc_cali_handle));
+    adc_cali_raw_to_voltage(_adc_cali_handle, ZERO_CURRENT_ADC, &_zero_voltage);
 }
 
 float ACS712::readCurrent() {
     uint32_t raw = _readRawAverage();
     
     // Convert to voltage (with calibration and divider compensation)
-    float voltage = esp_adc_cal_raw_to_voltage(raw, &_adc_chars) / 1000.0;
+    int voltage;
+    adc_cali_raw_to_voltage(_adc_cali_handle, raw, &voltage);
 
-    // Calculate current
-    float zero_voltage = esp_adc_cal_raw_to_voltage(ZERO_CURRENT_ADC, &_adc_chars) / 1000.0;
-    float current = (voltage - zero_voltage) * VOLTAGE_DIVIDER_RATIO / (MVA/1000.0);
+    float current = (voltage - _zero_voltage)/1000.0 * VOLTAGE_DIVIDER_RATIO / (MVA/1000.0);
 
     return current;
 }
@@ -34,12 +49,14 @@ float ACS712::calibrate(float realCurrent) {
 }
 
 uint32_t ACS712::_readRawAverage() {
-    const int samples = 256; // Increased for better noise immunity
+    const int samples = 128;
     uint32_t raw = 0;
+    int raw_sample = 0;
     
     // Sample averaging
-    for(int i=0; i<samples; i++) {
-        raw += adc1_get_raw(_pin);
+    for(int i=0; i < samples; i++) {
+        adc_oneshot_read(_adc_handle, _pin, &raw_sample);
+        raw += raw_sample;
     }
     raw /= samples;
     return raw;    

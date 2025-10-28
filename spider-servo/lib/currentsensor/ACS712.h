@@ -1,9 +1,10 @@
-#include "driver/adc.h"
-#include "esp_adc_cal.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
 
 class ACS712 {
     public:
-        void setup(adc1_channel_t pin);
+        void setup(adc_channel_t pin);
         float readCurrent();
 
         float calibrate(float realCurrent);
@@ -14,8 +15,11 @@ class ACS712 {
         //ACS712 5A 185mV/A 
         static constexpr int MVA = 220;//100;
         
-        adc1_channel_t _pin;
-        esp_adc_cal_characteristics_t _adc_chars;
+
+        adc_channel_t _pin;
+        adc_oneshot_unit_handle_t _adc_handle;
+        adc_cali_handle_t _adc_cali_handle;
+        int _zero_voltage;
 
         uint32_t _readRawAverage();
 };

@@ -34,7 +34,7 @@ static constexpr gpio_num_t PIN_MT6701_CS = GPIO_NUM_10;
 static const gpio_num_t TWAI_TX_PIN = GPIO_NUM_7;
 static const gpio_num_t TWAI_RX_PIN = GPIO_NUM_8;
 
-static constexpr adc1_channel_t PIN_CURRENT_SENSOR = ADC1_CHANNEL_5;
+static constexpr adc_channel_t PIN_CURRENT_SENSOR = ADC_CHANNEL_5;
 static constexpr gpio_num_t PIN_MOTOR_PWM = GPIO_NUM_1;
 static constexpr gpio_num_t PIN_MOTOR_DIR = GPIO_NUM_2;
 static constexpr gpio_num_t PIN_MOTOR_BRAKE = GPIO_NUM_3;
