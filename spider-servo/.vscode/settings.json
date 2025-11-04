@@ -1,3 +1,14 @@
 {
-    "idf.port": "/dev/tty.usbmodem2101"
+    "idf.port": "/dev/tty.usbmodem2101",
+    "idf.espIdfPath": "/Users/alarin/esp/esp-idf",
+    "idf.toolsPath": "/Users/alarin/.espressif",
+    "idf.pythonInstallPath": "/Users/alarin/miniconda3/bin/python3",
+    "files.associations": {
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "span": "cpp",
+        "cstdint": "cpp",
+        "format": "cpp"
+    }
 }
