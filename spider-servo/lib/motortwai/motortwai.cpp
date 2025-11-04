@@ -2,11 +2,15 @@
 #include <memory.h>
 
 
-void MotorTWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin) {
+void MotorTWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin, bool selfTest = false) {
     _legn = legn;
     _motorn = motorn;
+    _selfTest = selfTest;
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(tx_pin, rx_pin, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // 500kbps (common CAN speed)
+    if (_selfTest) {
+        g_config = TWAI_GENERAL_CONFIG_DEFAULT(tx_pin, rx_pin, TWAI_MODE_NO_ACK);
+    }
+    twai_timing_config_t t_config = TWAI_SPEED;
 
     twai_filter_config_t f_config = createMotorFilter(_legn, _motorn);
     //twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
@@ -58,7 +62,24 @@ void MotorTWAI::sendStatus(motor_status_t status) {
     twai_message_t tx_msg;
     tx_msg.data_length_code = sizeof(status);
     tx_msg.identifier = createMsgId(MOTOR_FEEDBACK, _legn, _motorn);
+    if (_selfTest) {
+        tx_msg.flags = TWAI_MSG_FLAG_SELF;
+    }
     memcpy(&tx_msg.data, &status, sizeof(status));
+    ESP_ERROR_CHECK(twai_transmit(&tx_msg, portMAX_DELAY));
+    ESP_LOGI(TAG, "Msg sent id: %ld", tx_msg.identifier);
+    ESP_LOG_BUFFER_HEX(TAG, tx_msg.data, tx_msg.data_length_code);
+}
+
+
+void MotorTWAI::testSendMotorCommand(motor_command_t cmd) {
+    twai_message_t tx_msg;
+    tx_msg.data_length_code = sizeof(cmd);
+    tx_msg.identifier = createMsgId(MOTOR_COMMAND, _legn, _motorn);
+    if (_selfTest) {
+        tx_msg.flags = TWAI_MSG_FLAG_SELF;
+    }
+    memcpy(&tx_msg.data, &cmd, sizeof(cmd));
     ESP_ERROR_CHECK(twai_transmit(&tx_msg, portMAX_DELAY));
     ESP_LOGI(TAG, "Msg sent id: %ld", tx_msg.identifier);
     ESP_LOG_BUFFER_HEX(TAG, tx_msg.data, tx_msg.data_length_code);

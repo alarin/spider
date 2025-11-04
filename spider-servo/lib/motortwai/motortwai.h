@@ -10,15 +10,17 @@
 
 class MotorTWAI {
     public:
-        void setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin);
+        void setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin, bool selfTest);
         bool receive(motor_command_t *cmd);
         void sendStatus(motor_status_t status);
+        void testSendMotorCommand(motor_command_t cmd);
         void logStatus();
 
     private:
         static constexpr const char* TAG = "MTR_TWAI";
         uint8_t _legn;
         uint8_t _motorn;
+        bool _selfTest = false;
 };
 
 #endif
