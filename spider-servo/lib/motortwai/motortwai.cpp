@@ -1,8 +1,8 @@
-#include "twai.h"
+#include "motortwai.h"
 #include <memory.h>
 
 
-void MOTOR_TWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin) {
+void MotorTWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin) {
     _legn = legn;
     _motorn = motorn;
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(tx_pin, rx_pin, TWAI_MODE_NORMAL);
@@ -39,7 +39,7 @@ void MOTOR_TWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num
     }    
 }
 
-bool MOTOR_TWAI::receive(motor_command_t *cmd) {
+bool MotorTWAI::receive(motor_command_t *cmd) {
     twai_message_t rx_msg;
     esp_err_t status;
     status = twai_receive(&rx_msg, pdMS_TO_TICKS(100));
@@ -54,7 +54,7 @@ bool MOTOR_TWAI::receive(motor_command_t *cmd) {
     return false;
 }
 
-void MOTOR_TWAI::sendStatus(motor_status_t status) {
+void MotorTWAI::sendStatus(motor_status_t status) {
     twai_message_t tx_msg;
     tx_msg.data_length_code = sizeof(status);
     tx_msg.identifier = createMsgId(MOTOR_FEEDBACK, _legn, _motorn);
@@ -64,7 +64,7 @@ void MOTOR_TWAI::sendStatus(motor_status_t status) {
     ESP_LOG_BUFFER_HEX(TAG, tx_msg.data, tx_msg.data_length_code);
 }
 
-void MOTOR_TWAI::logStatus() {
+void MotorTWAI::logStatus() {
     uint32_t alerts_triggered;
     twai_status_info_t status_info;
 
