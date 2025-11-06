@@ -8,7 +8,7 @@
 #include "twai_proto.h"
 
 
-class MotorTWAI {
+class MOTOR_TWAI {
     public:
         void setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_t rx_pin);
         bool receive(motor_command_t *cmd);
@@ -16,7 +16,7 @@ class MotorTWAI {
         void logStatus();
 
     private:
-        static constexpr const char* TAG = "MTR_TWAI";
+        static constexpr const char* TAG = "TWAI";
         uint8_t _legn;
         uint8_t _motorn;
 };

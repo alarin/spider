@@ -8,7 +8,7 @@
 #include "sdkconfig.h"
 
 #include "motordriver/motordriver.h"
-#include "motortwai.h"
+#include "twai/twai.h"
 
 
 #include "config.h"
@@ -33,7 +33,7 @@ void app_main(void)
     MT6701 encoder;
     MotorDriver motorDriver(encoder);
 
-    MotorTWAI twai;
+    MOTOR_TWAI twai;
     motor_command_t motor_cmd;
 
     
