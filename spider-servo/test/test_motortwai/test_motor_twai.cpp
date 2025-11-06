@@ -23,36 +23,35 @@ void tearDown(void) {
   // clean stuff up here
 }
 
-static motor_command_t receivedCommand;
-
-static void motorCommandReceived(motor_command_t cmd) {
-    receivedCommand = cmd;
-}
 
 void testLoopback(void) {
     static constexpr float ANGLE = 111;
 
     MotorTWAI twai;
-    twai.setOnMotorCommandCallback(motorCommandReceived);
-    twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN, false);
+    
+    twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN, true);
     motor_status_t mstatus = {
       .state = MAX_CURRENT_PROTECTION,
       .angle = ANGLE
     };
     twai.sendStatus(mstatus);
 
-    motor_command_t mcmd = {
+    motor_command_t recievedMcmd;
+    TEST_ASSERT_EQUAL(false, twai.rxFromQueue(&recievedMcmd, pdMS_TO_TICKS(100))); //should be filtered
+
+    motor_command_t sentMcmd = {
       .command = SET_ANGLE,
       .param = ANGLE
     };
-    twai.sendMotorCommand(mcmd);
-    twai.sendMotorCommand(mcmd);
+    twai.sendMotorCommand(sentMcmd);
 
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    TEST_ASSERT_EQUAL(true, twai.rxFromQueue(&recievedMcmd, pdMS_TO_TICKS(100)));
+    ESP_LOG_BUFFER_HEX(TAG, &recievedMcmd, sizeof(recievedMcmd));
+    
     twai.logStatus();
 
-    TEST_ASSERT_EQUAL(mcmd.command, receivedCommand.command);
-    TEST_ASSERT_EQUAL(mcmd.param, receivedCommand.param);
+    TEST_ASSERT_EQUAL(sentMcmd.command, recievedMcmd.command);
+    TEST_ASSERT_EQUAL(sentMcmd.param, recievedMcmd.param);
 }
 
 void app_main() {

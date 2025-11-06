@@ -9,3 +9,11 @@ twai_filter_config_t createMotorFilter(uint8_t legN, uint8_t motorN) {
                                         .acceptance_mask = ~(TWAI_STD_ID_MASK << 21),
                                         .single_filter = true};
 }
+
+twai_mask_filter_config_t createMaskMotorFilter(uint8_t legN, uint8_t motorN) {
+    return twai_mask_filter_config_t {
+        .id = uint32_t(createMsgId(MOTOR_COMMAND, legN, motorN)),
+        .mask = TWAI_STD_ID_MASK,
+        .is_ext = false,
+    };
+}
