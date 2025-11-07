@@ -101,6 +101,10 @@ double MotorDriver::getCurrentAngle() {
     return _current_angle;
 }
 
+float MotorDriver::getCurrent() {
+    return _current;
+}
+
 void MotorDriver::logInfo(bool skipSameLogs) {
     //char currentMessage[254];
     // sprintf(currentMessage, "_DD_ state: %d, angle: %.2f, target: %.2f, output: %.2f, duty: %.2f, current: %.2f", _state, _current_angle, _target_angle, _pid_output, _last_duty_cycle, _current);

@@ -32,7 +32,7 @@ void MotorTWAI::setup(uint8_t legn, uint8_t motorn, gpio_num_t tx_pin, gpio_num_
 
     twai_event_callbacks_t user_cbs = {
         .on_rx_done = staticRxWrapper,
-        .on_error = staticErrorWrapper
+        // .on_error = staticErrorWrapper
     };
     ESP_ERROR_CHECK(twai_node_register_event_callbacks(node_hdl, &user_cbs, this));
 
@@ -89,8 +89,8 @@ void MotorTWAI::sendStatus(motor_status_t status) {
         .buffer_len = sizeof(status)
     };
     ESP_ERROR_CHECK(twai_node_transmit(node_hdl, &tx_msg, 0));
-    ESP_LOGI(TAG, "Msg sent id: %ld", tx_msg.header.id);
-    ESP_LOG_BUFFER_HEX(TAG, tx_msg.buffer, tx_msg.buffer_len);
+    ESP_LOGD(TAG, "Msg sent id: %ld", tx_msg.header.id);
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, tx_msg.buffer, tx_msg.buffer_len, ESP_LOG_DEBUG);
 }
 
 // Function just for UNIT test, send command for this receiver

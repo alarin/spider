@@ -9,7 +9,7 @@ class MT6701Emulator : public MT6701 {
     
         const float REVOLUTIONS_PER_SECOND = 10;
         void begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) override;
-        bool read(double *angle, MT6701::mt6701_status_t *field_status, bool *button_pushed, bool *track_loss) override;
+        bool read(float *angle, MT6701::mt6701_status_t *field_status, bool *button_pushed, bool *track_loss) override;
         
         void setSpeedAndDirection(bool direction, uint16_t speed);
 

@@ -1,3 +1,5 @@
+#include <variant>
+
 #include "mt6701.h"
 #include "mt6701_emulator.h"
 #include "ACS712.h"
@@ -28,6 +30,8 @@ class MotorDriver {
         void setTargetAngle(double angle);
         double getCurrentAngle();
 
+        float getCurrent();
+
         void setP(double p);
         void setI(double i);
         void setD(double d);
@@ -54,32 +58,29 @@ class MotorDriver {
         static constexpr uint16_t TUNING_CYCLES = 500;
  
         static constexpr uint8_t OUTPUT_MID_POINT = 255;
-        static constexpr double MAX_CURRENT = CURRENT_LIMIT;
-
-        static constexpr double ANGLE_PROTECTION_DIFF = 3;
-
+        static constexpr float MAX_CURRENT = CURRENT_LIMIT;
 
         bool hand_tuning = false;
 
         uint8_t _tuning = 0;
         uint32_t _tuning_cycle = 0;
-        double _tuning_max_angle = 0;
+        float _tuning_max_angle = 0;
         uint32_t _max_angle_t = 0;
-        double _tuning_min_angle = 360;
+        float _tuning_min_angle = 360;
         uint32_t _min_angle_t = 0;
         float _last_duty_cycle = 0;
 
         State _state;
-        double _min_angle;
-        double _max_angle;
+        float _min_angle;
+        float _max_angle;
         
-        double _current;
-        double _current_angle;
-        double _target_angle;
-        double _pid_output;
+        float _current;
+        float _current_angle;
+        float _target_angle;
+        float _pid_output;
 
         ACS712 currentSensor;
-        MT6701& encoder;
+        MT6701 &encoder;
         QuickPID positionPID;
         AmplitudeStabilityAnalyzer oscilationDetector;
 

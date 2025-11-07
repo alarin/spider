@@ -7,7 +7,7 @@ void MT6701Emulator::begin(gpio_num_t sck, gpio_num_t miso, gpio_num_t ss) {
     current_position = 50;
 }
 
-bool MT6701Emulator::read(double *angle, MT6701::mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
+bool MT6701Emulator::read(float *angle, MT6701::mt6701_status_t *field_status, bool *button_pushed, bool *track_loss ){
     computePosition();
     //emulate delay/interrupts whatever
     //readData();

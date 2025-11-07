@@ -14,7 +14,7 @@
 #include "config.h"
 #include "twai_proto.h"
 
-#define CONFIG_PRINT_DELAY 500
+#define CONFIG_PRINT_DELAY 1000
 #define INPUT_BUFFER_SIZE 100
 
 static const char *TAG = "spider-servo";
@@ -23,22 +23,102 @@ extern "C" {
     void app_main(void);
 }
 
+
+class MotorController {
+    private:
+        static constexpr uint32_t HEARTBEAT_DELAY_TICKS = pdMS_TO_TICKS(300);
+
+        MotorTWAI twai;
+        MT6701 *encoder;
+        MotorDriver motorDriver;
+        
+        void twaiRxTask() {
+            motor_command_t motor_cmd;
+
+            for(;;) {
+                twai.rxFromQueue(&motor_cmd);
+                ESP_LOGI(TAG, "Motor command received");
+
+                if (motor_cmd.command == SET_ANGLE) {
+                    motorDriver.setTargetAngle(motor_cmd.param);
+                } else if (motor_cmd.command == REQUEST_STATUS) {
+                    twai.sendStatus(motor_status_t {
+                        (MotorState) motorDriver.getState(), 
+                        (float) motorDriver.getCurrentAngle(),
+                        static_cast<uint8_t>(motorDriver.getCurrent() * 10)
+                    });
+                }
+            }
+        }
+
+        void twaiHeartbeatTask() {
+            for(;;) {
+                twai.sendStatus(motor_status_t {
+                    (MotorState) motorDriver.getState(), 
+                    (float) motorDriver.getCurrentAngle(),
+                    static_cast<uint8_t>(motorDriver.getCurrent() * 10)
+                });
+                vTaskDelay(HEARTBEAT_DELAY_TICKS);
+            }
+        }
+
+        MotorController(MT6701 *encoder) : encoder(encoder), motorDriver(*encoder) {}
+    public:
+        static MotorController create(bool encoderEmulation) {
+            if (encoderEmulation) {
+                MT6701Emulator *encoder = new MT6701Emulator(0.5, 1);
+                return MotorController(encoder);
+            } else {
+                MT6701 *encoder = new MT6701();
+                return MotorController(encoder);
+            }
+        }
+        
+        ~ MotorController() {
+            delete encoder;
+        }
+
+        void logInfo() {
+            motorDriver.logInfo();
+        }
+
+        void start() {
+            motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
+
+            twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
+
+            xTaskCreatePinnedToCore(
+                [](void* arg){ static_cast<MotorController*>(arg)->twaiRxTask(); },
+                "twaiRX",
+                10000,
+                this,
+                10,
+                NULL,
+                1
+            );
+
+            xTaskCreatePinnedToCore(
+                [](void* arg){ static_cast<MotorController*>(arg)->twaiHeartbeatTask(); },
+                "twaiHearbeat",
+                10000,
+                this,
+                10,
+                NULL,
+                1
+            );
+
+        }
+};
+
 void app_main(void)
 {
+    MotorController mc = MotorController::create(true);
+    mc.start();
+
     uint8_t ch;    
     char inputBuffer[INPUT_BUFFER_SIZE + 1]; 
     double commandValue;
     uint8_t inputPos = 0;
-    MT6701Emulator encoderEmulator(1, 0.5);
-    MT6701 encoder;
-    MotorDriver motorDriver(encoder);
-
-    MotorTWAI twai;
-    motor_command_t motor_cmd;
-
-    
-    motorDriver.setup(MOTOR_MIN_ANGLE, MOTOR_MAX_ANGLE);    
-    // twai.setup(LEG_ID, MOTOR_ID, TWAI_TX_PIN, TWAI_RX_PIN);
 
     while (1) { 
         // if (twai.receive(&motor_cmd)) {
@@ -57,27 +137,27 @@ void app_main(void)
                 ESP_LOGI(TAG, "command received: %c %.2f \n", inputBuffer[0], commandValue);
                 switch(inputBuffer[0]) {
                     case 'a': 
-                        motorDriver.setTargetAngle(commandValue);
+                        // motorDriver.setTargetAngle(commandValue);
                         break;
                     case 'p':
-                        motorDriver.setP(commandValue);
+                        // motorDriver.setP(commandValue);
                         break;
                     case 'i':
-                        motorDriver.setI(commandValue);
+                        // motorDriver.setI(commandValue);
                         break;
                     case 'd':
-                        motorDriver.setD(commandValue);
+                        // motorDriver.setD(commandValue);
                         break;
                     case 'z':                        
                         ESP_LOGE(TAG, "Starting PID tuning");
-                        motorDriver.startTuning();
+                        // motorDriver.startTuning();
                         break;
                     case 'w':                        
-                        ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));
+                        // ESP_LOGE(TAG, "Calibrate current response %.3f", motorDriver.calibrateCurrent(commandValue/100));
                         break;
                     case 's':
-                        motorDriver.logInfo(false);
-                        twai.logStatus();
+                        // motorDriver.logInfo(false);
+                        // twai.logStatus();
                         break;
                 }
                 
@@ -87,7 +167,7 @@ void app_main(void)
             }
 	    }                    
         
-        motorDriver.logInfo();
+        mc.logInfo();
         vTaskDelay(CONFIG_PRINT_DELAY / portTICK_PERIOD_MS);
     }
 }
